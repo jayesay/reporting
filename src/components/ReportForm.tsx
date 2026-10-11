@@ -145,16 +145,17 @@ export function ReportForm({
   }, [report]);
 
   function patch<K extends keyof ReportInput>(key: K, value: ReportInput[K]) {
-    setForm((prev) => {
-      const next = { ...prev, [key]: value };
-      if (key === "team_name" && typeof value === "string") {
-        storeTeamName(value);
-      }
-      if (key === "attendees") {
-        storeAttendees(value as string[]);
-      }
-      return next;
-    });
+    if (key === "team_name") {
+      storeTeamName(String(value ?? ""));
+    }
+    if (key === "attendees") {
+      const attendees = (Array.isArray(value) ? value : []).filter(
+        (item): item is string => typeof item === "string",
+      );
+      storeAttendees(attendees);
+    }
+
+    setForm((prev) => ({ ...prev, [key]: value }));
   }
 
   async function persist(next: ReportInput = formRef.current) {
