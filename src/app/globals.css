@@ -128,11 +128,12 @@ a {
 
 .brand-mark {
   margin: 0;
-  font-size: 0.78rem;
+  font-size: 1.15rem;
   font-weight: 700;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--teal-deep);
+  line-height: 1.25;
 }
 
 .home h1,
@@ -354,6 +355,27 @@ a {
   gap: 0.45rem;
   align-items: center;
   justify-content: flex-end;
+}
+
+.status-select {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: var(--ink-soft);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.status-select select {
+  height: 2.2rem;
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  padding: 0 0.7rem;
+  background: rgba(255, 255, 255, 0.75);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
 }
 
 .save-pill {
@@ -611,16 +633,6 @@ a {
   background: rgba(255, 255, 255, 0.45);
 }
 
-.export-section {
-  border-color: rgba(217, 107, 76, 0.28);
-}
-
-.export-section .lede {
-  margin: 0 0 0.85rem;
-  color: var(--ink-soft);
-  font-size: 0.9rem;
-}
-
 .missing-page {
   min-height: 100vh;
   display: grid;
@@ -628,6 +640,262 @@ a {
   gap: 0.65rem;
   text-align: center;
   animation: rise 0.45s ease both;
+}
+
+.view-route {
+  position: relative;
+  z-index: 1;
+  width: min(860px, calc(100% - 2rem));
+  margin: 0 auto;
+  padding: 2rem 0 3rem;
+}
+
+.view-shell {
+  display: grid;
+  gap: 1rem;
+  animation: rise 0.45s ease both;
+}
+
+.view-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+/* 예전 열람용 HTML과 동일한 문서 톤 */
+.view-doc {
+  padding: 36px 40px 40px;
+  border: 1px solid #d7e3e1;
+  border-radius: 16px;
+  background: #ffffff;
+  box-shadow: 0 18px 40px rgba(18, 38, 43, 0.08);
+  color: #12262b;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.view-doc .view-header {
+  margin-bottom: 28px;
+  padding-bottom: 18px;
+  border-bottom: 2px solid #0f6e6a;
+}
+
+.view-doc .view-brand {
+  margin: 0 0 6px;
+  color: #0a4f4c;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.25;
+}
+
+.view-doc .view-header h1 {
+  margin: 0;
+  color: #12262b;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.03em;
+}
+
+.view-doc .view-meta {
+  margin: 10px 0 0;
+  color: #4a646b;
+  font-size: 14px;
+}
+
+.view-doc .view-section {
+  margin-top: 28px;
+}
+
+.view-doc .view-section h2 {
+  margin: 0 0 12px;
+  padding: 10px 12px;
+  background: #e7f1f0;
+  border-left: 4px solid #0f6e6a;
+  color: #0a4f4c;
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.view-doc .view-section h3 {
+  margin: 18px 0 8px;
+  color: #12262b;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.view-doc .view-section ul {
+  margin: 0;
+  padding-left: 1.25rem;
+  list-style: disc;
+}
+
+.view-doc .view-section li {
+  margin: 0 0 8px;
+  color: #12262b;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.view-doc .view-section li:last-child {
+  margin-bottom: 0;
+}
+
+.view-doc .view-section strong {
+  color: #0a4f4c;
+  font-weight: 700;
+}
+
+.view-doc .view-block {
+  margin: 0;
+}
+
+.view-doc .view-block p {
+  margin: 0 0 8px;
+  color: #12262b;
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+.view-doc .view-block p:last-child {
+  margin-bottom: 0;
+}
+
+.view-doc .view-ai-card {
+  margin: 0 0 16px;
+}
+
+.view-doc .view-ai-card:last-child {
+  margin-bottom: 0;
+}
+
+.view-doc .view-ai-card h3 {
+  margin-top: 0;
+}
+
+.view-doc .view-ai-card ul {
+  margin-top: 6px;
+}
+
+.view-photo-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.view-photo-toolbar .hint {
+  flex: 1 1 100%;
+  margin: 0;
+  color: #4a646b;
+  font-size: 13px;
+}
+
+.view-photo-add {
+  position: relative;
+  overflow: hidden;
+}
+
+.view-photo-add input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.view-doc .photo-placeholder {
+  padding: 28px 16px;
+  border: 1px dashed #9aa8a6;
+  border-radius: 10px;
+  background: transparent;
+  color: #4a646b;
+  text-align: center;
+  font-size: 14px;
+}
+
+.view-photo-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.view-photo-grid li {
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.view-photo-grid img {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border: 1px solid #d7e3e1;
+  border-radius: 10px;
+}
+
+.view-photo-meta {
+  display: grid;
+  gap: 6px;
+}
+
+.view-photo-meta span {
+  color: #4a646b;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.view-photo-meta .btn {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+@media (max-width: 720px) {
+  .view-doc {
+    padding: 1.25rem 1.1rem 1.5rem;
+  }
+
+  .view-doc .view-header h1 {
+    font-size: 24px;
+  }
+}
+
+@media print {
+  body {
+    background: #fff !important;
+  }
+
+  body::before {
+    display: none;
+  }
+
+  .view-route {
+    width: 100%;
+    padding: 0;
+  }
+
+  .view-doc {
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .no-print {
+    display: none !important;
+  }
 }
 
 .back-link {

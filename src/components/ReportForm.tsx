@@ -8,7 +8,7 @@ import {
   deleteReport,
   saveReport,
 } from "@/app/actions/reports";
-import { reportToHtml, reportToViewDocument } from "@/lib/report-html";
+import { formatSeoulDateTime } from "@/lib/format-datetime";
 import {
   createEmptyAiService,
   createEmptyReportInput,
@@ -86,7 +86,6 @@ export function ReportForm({ report }: ReportFormProps) {
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState(report?.updated_at ?? "");
-  const [copyState, setCopyState] = useState<"idle" | "copied">("idle");
   const [shareState, setShareState] = useState<"idle" | "copied">("idle");
   const [pending, startTransition] = useTransition();
   const creatingRef = useRef(false);
@@ -145,22 +144,6 @@ export function ReportForm({ report }: ReportFormProps) {
     });
   }
 
-  function handleMarkDone() {
-    const next = { ...form, status: "done" as const };
-    setForm(next);
-    startTransition(async () => {
-      await persist(next);
-    });
-  }
-
-  function handleMarkDraft() {
-    const next = { ...form, status: "draft" as const };
-    setForm(next);
-    startTransition(async () => {
-      await persist(next);
-    });
-  }
-
   function handleDelete() {
     if (!slug) {
       router.push("/");
@@ -181,40 +164,6 @@ export function ReportForm({ report }: ReportFormProps) {
     });
   }
 
-  async function copyHtml() {
-    const html = reportToHtml(form);
-    try {
-      if (typeof ClipboardItem !== "undefined") {
-        await navigator.clipboard.write([
-          new ClipboardItem({
-            "text/html": new Blob([html], { type: "text/html" }),
-            "text/plain": new Blob([html], { type: "text/plain" }),
-          }),
-        ]);
-      } else {
-        await navigator.clipboard.writeText(html);
-      }
-      setCopyState("copied");
-    } catch {
-      await navigator.clipboard.writeText(html);
-      setCopyState("copied");
-    }
-    window.setTimeout(() => setCopyState("idle"), 1600);
-  }
-
-  function downloadViewHtml() {
-    const documentHtml = reportToViewDocument(form);
-    const blob = new Blob([documentHtml], { type: "text/html;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement("a");
-    const month = form.report_month || "draft";
-    const team = form.team_name || "innosight";
-    anchor.href = url;
-    anchor.download = `${team}-${month}-활동보고서-열람용.html`;
-    anchor.click();
-    URL.revokeObjectURL(url);
-  }
-
   async function copyShareLink() {
     if (!slug) return;
     const url = `${window.location.origin}/r/${slug}`;
@@ -223,9 +172,7 @@ export function ReportForm({ report }: ReportFormProps) {
     window.setTimeout(() => setShareState("idle"), 1600);
   }
 
-  const savedLabel = updatedAt
-    ? new Date(updatedAt).toLocaleString("ko-KR")
-    : "-";
+  const savedLabel = updatedAt ? formatSeoulDateTime(updatedAt) : "-";
 
   return (
     <div className="report-shell">
@@ -250,37 +197,38 @@ export function ReportForm({ report }: ReportFormProps) {
                     : `최근 저장 · ${savedLabel}`}
           </div>
           {slug ? (
-            <button type="button" className="btn ghost" onClick={copyShareLink}>
-              {shareState === "copied" ? "링크 복사됨" : "비밀 링크 복사"}
-            </button>
+            <>
+              <Link href={`/r/${slug}/view`} className="btn ghost">
+                조회하기
+              </Link>
+              <button type="button" className="btn ghost" onClick={copyShareLink}>
+                {shareState === "copied" ? "링크 복사됨" : "비밀 링크 복사"}
+              </button>
+            </>
           ) : null}
+          <label className="status-select">
+            <span>상태</span>
+            <select
+              value={form.status}
+              onChange={(e) =>
+                patch(
+                  "status",
+                  e.target.value === "done" ? "done" : "draft",
+                )
+              }
+            >
+              <option value="draft">임시저장</option>
+              <option value="done">작성 완료</option>
+            </select>
+          </label>
           <button
             type="button"
-            className="btn ghost"
+            className="btn primary"
             onClick={handleManualSave}
             disabled={pending}
           >
-            임시저장
+            저장
           </button>
-          {form.status === "draft" ? (
-            <button
-              type="button"
-              className="btn primary"
-              onClick={handleMarkDone}
-              disabled={pending}
-            >
-              작성 완료
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="btn ghost"
-              onClick={handleMarkDraft}
-              disabled={pending}
-            >
-              다시 임시저장 상태
-            </button>
-          )}
           <button
             type="button"
             className="btn ghost danger"
@@ -411,8 +359,8 @@ export function ReportForm({ report }: ReportFormProps) {
           <div className="field">
             <label>사진</label>
             <div className="photo-placeholder">
-              <p>사진은 보고서 작성 화면이 아니라 열람용 HTML에서 추가합니다.</p>
-              <p>열람용 HTML을 연 뒤 사진 섹션에서 로컬로 넣고 저장하세요.</p>
+              <p>사진은 작성 화면이 아니라 조회 페이지에서 추가합니다.</p>
+              <p>저장 후 상단의 조회하기에서 로컬로 넣을 수 있습니다.</p>
             </div>
           </div>
         </section>
@@ -582,21 +530,6 @@ export function ReportForm({ report }: ReportFormProps) {
               value={form.next_goals}
               onChange={(e) => patch("next_goals", e.target.value)}
             />
-          </div>
-        </section>
-
-        <section className="section export-section">
-          <h2>내보내기</h2>
-          <p className="lede">
-            게시판용은 HTML 복사, 팀 내부 확인용은 열람용 HTML을 내려받으세요.
-          </p>
-          <div className="report-actions">
-            <button type="button" className="btn primary" onClick={copyHtml}>
-              {copyState === "copied" ? "복사됨" : "HTML 복사 (DEXT5용)"}
-            </button>
-            <button type="button" className="btn ghost" onClick={downloadViewHtml}>
-              열람용 HTML 다운로드
-            </button>
           </div>
         </section>
       </form>

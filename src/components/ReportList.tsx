@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReportListItem } from "@/app/actions/reports";
+import { formatSeoulDateTime } from "@/lib/format-datetime";
 
 type ReportListProps = {
   reports: ReportListItem[];
@@ -10,16 +11,6 @@ function formatMonth(value: string) {
   const [year, month] = value.split("-");
   if (!year || !month) return value;
   return `${year}.${month}`;
-}
-
-function formatUpdatedAt(value: string) {
-  return new Date(value).toLocaleString("ko-KR", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
 }
 
 function cell(value: string, fallback = "-") {
@@ -76,7 +67,7 @@ export function ReportList({ reports }: ReportListProps) {
               <td>
                 <Link href={`/r/${report.slug}`}>
                   <time dateTime={report.updated_at}>
-                    {formatUpdatedAt(report.updated_at)}
+                    {formatSeoulDateTime(report.updated_at)}
                   </time>
                 </Link>
               </td>
