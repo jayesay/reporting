@@ -23,6 +23,32 @@ type ReportFormProps = {
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
+/** datetime-local 값을 10분 단위로 맞춤 (YYYY-MM-DDTHH:mm) */
+function snapToTenMinutes(value: string) {
+  const match = value.match(/^(\d{4}-\d{2}-\d{2}T\d{2}):(\d{2})/);
+  if (!match) return value;
+
+  const hourPart = match[1];
+  const minutes = Number(match[2]);
+  if (Number.isNaN(minutes)) return value;
+
+  const snapped = Math.round(minutes / 10) * 10;
+  if (snapped === 60) {
+    const date = new Date(`${hourPart}:00`);
+    if (Number.isNaN(date.getTime())) {
+      return `${hourPart}:50`;
+    }
+    date.setHours(date.getHours() + 1, 0, 0, 0);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    const hour = String(date.getHours()).padStart(2, "0");
+    return `${year}-${month}-${day}T${hour}:00`;
+  }
+
+  return `${hourPart}:${String(snapped).padStart(2, "0")}`;
+}
+
 function toInput(report?: Report): ReportInput {
   if (!report) {
     return createEmptyReportInput();
@@ -320,8 +346,11 @@ export function ReportForm({ report }: ReportFormProps) {
               <input
                 id="meeting_start"
                 type="datetime-local"
+                step={600}
                 value={form.meeting_start}
-                onChange={(e) => patch("meeting_start", e.target.value)}
+                onChange={(e) =>
+                  patch("meeting_start", snapToTenMinutes(e.target.value))
+                }
               />
             </div>
             <div className="field">
@@ -329,8 +358,11 @@ export function ReportForm({ report }: ReportFormProps) {
               <input
                 id="meeting_end"
                 type="datetime-local"
+                step={600}
                 value={form.meeting_end}
-                onChange={(e) => patch("meeting_end", e.target.value)}
+                onChange={(e) =>
+                  patch("meeting_end", snapToTenMinutes(e.target.value))
+                }
               />
             </div>
             <div className="field">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 type TagListInputProps = {
   label: string;
@@ -23,10 +23,14 @@ export function TagListInput({
   onChange,
 }: TagListInputProps) {
   const [draft, setDraft] = useState("");
+  const composingRef = useRef(false);
 
   function addNames(raw: string) {
     const nextNames = parseNames(raw);
-    if (nextNames.length === 0) return;
+    if (nextNames.length === 0) {
+      setDraft("");
+      return;
+    }
 
     const merged = [...values];
     for (const name of nextNames) {
@@ -64,17 +68,51 @@ export function TagListInput({
               ? "예: 김민수, 이서연, 박준호"
               : "이름 추가"
           }
-          onChange={(event) => setDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === ",") {
-              event.preventDefault();
-              addNames(draft);
+          onCompositionStart={() => {
+            composingRef.current = true;
+          }}
+          onCompositionEnd={(event) => {
+            composingRef.current = false;
+            const value = event.currentTarget.value;
+            if (/[,，、/\n]/.test(value)) {
+              addNames(value);
+            } else {
+              setDraft(value);
             }
+          }}
+          onChange={(event) => {
+            const value = event.target.value;
+            // 한글 조합 중에는 그대로 두고, 쉼표가 들어온 뒤에만 분리
+            const nativeEvent = event.nativeEvent as InputEvent;
+            if (composingRef.current || nativeEvent.isComposing) {
+              setDraft(value);
+              return;
+            }
+            if (/[,，、/\n]/.test(value)) {
+              addNames(value);
+              return;
+            }
+            setDraft(value);
+          }}
+          onKeyDown={(event) => {
+            if (event.nativeEvent.isComposing || event.keyCode === 229) {
+              return;
+            }
+
+            if (event.key === "Enter") {
+              event.preventDefault();
+              if (draft.trim()) {
+                addNames(draft);
+              }
+              return;
+            }
+
             if (event.key === "Backspace" && !draft && values.length > 0) {
               onChange(values.slice(0, -1));
             }
           }}
           onBlur={() => {
+            if (composingRef.current) return;
             if (draft.trim()) {
               addNames(draft);
             }
