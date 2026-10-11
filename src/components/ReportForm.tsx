@@ -150,8 +150,8 @@ export function ReportForm({
       if (key === "team_name" && typeof value === "string") {
         storeTeamName(value);
       }
-      if (key === "attendees" && Array.isArray(value)) {
-        storeAttendees(value);
+      if (key === "attendees") {
+        storeAttendees(value as string[]);
       }
       return next;
     });
