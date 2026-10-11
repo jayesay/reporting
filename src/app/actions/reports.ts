@@ -63,6 +63,57 @@ export type ReportListItem = {
   updated_at: string;
 };
 
+export type NewReportDefaults = {
+  teamName: string;
+  attendees: string[];
+};
+
+/** 가장 최근 보고서의 팀명·참석 인원 (새 보고서 기본값) */
+export async function getNewReportDefaults(): Promise<NewReportDefaults> {
+  const empty: NewReportDefaults = { teamName: "", attendees: [] };
+
+  if (!isSupabaseConfigured()) {
+    return empty;
+  }
+
+  try {
+    const supabase = createSupabaseServerClient();
+    const { data, error } = await supabase
+      .from("reports")
+      .select("team_name, attendees")
+      .order("updated_at", { ascending: false })
+      .limit(20);
+
+    if (error || !data) {
+      return empty;
+    }
+
+    let teamName = "";
+    let attendees: string[] = [];
+
+    for (const row of data) {
+      if (!teamName) {
+        const name = String(row.team_name ?? "").trim();
+        if (name) teamName = name;
+      }
+      if (attendees.length === 0) {
+        const list = Array.isArray(row.attendees)
+          ? row.attendees
+              .filter((item): item is string => typeof item === "string")
+              .map((item) => item.trim())
+              .filter(Boolean)
+          : [];
+        if (list.length > 0) attendees = list;
+      }
+      if (teamName && attendees.length > 0) break;
+    }
+
+    return { teamName, attendees };
+  } catch {
+    return empty;
+  }
+}
+
 export async function listReports(): Promise<
   { ok: true; reports: ReportListItem[] } | { ok: false; error: string }
 > {

@@ -2,13 +2,20 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import {
   createReport,
   deleteReport,
   saveReport,
 } from "@/app/actions/reports";
 import { formatSeoulDateTime } from "@/lib/format-datetime";
+import {
+  readStoredAttendees,
+  readStoredTeamName,
+  storeAttendees,
+  storeReportDefaults,
+  storeTeamName,
+} from "@/lib/report-defaults";
 import {
   createEmptyAiService,
   createEmptyReportInput,
@@ -19,6 +26,9 @@ import { TagListInput } from "@/components/TagListInput";
 
 type ReportFormProps = {
   report?: Report;
+  /** 새 보고서일 때 서버에서 가져온 기본값 */
+  defaultTeamName?: string;
+  defaultAttendees?: string[];
 };
 
 type SaveState = "idle" | "saving" | "saved" | "error";
@@ -49,9 +59,19 @@ function snapToTenMinutes(value: string) {
   return `${hourPart}:${String(snapped).padStart(2, "0")}`;
 }
 
-function toInput(report?: Report): ReportInput {
+function toInput(
+  report?: Report,
+  defaultTeamName = "",
+  defaultAttendees: string[] = [],
+): ReportInput {
   if (!report) {
-    return createEmptyReportInput();
+    return {
+      ...createEmptyReportInput(),
+      team_name: defaultTeamName.trim(),
+      attendees: defaultAttendees
+        .map((item) => item.trim())
+        .filter(Boolean),
+    };
   }
 
   return {
@@ -79,10 +99,16 @@ function toInput(report?: Report): ReportInput {
   };
 }
 
-export function ReportForm({ report }: ReportFormProps) {
+export function ReportForm({
+  report,
+  defaultTeamName = "",
+  defaultAttendees = [],
+}: ReportFormProps) {
   const router = useRouter();
   const [slug, setSlug] = useState<string | null>(report?.slug ?? null);
-  const [form, setForm] = useState<ReportInput>(() => toInput(report));
+  const [form, setForm] = useState<ReportInput>(() =>
+    toInput(report, defaultTeamName, defaultAttendees),
+  );
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState(report?.updated_at ?? "");
@@ -94,8 +120,41 @@ export function ReportForm({ report }: ReportFormProps) {
   slugRef.current = slug;
   formRef.current = form;
 
+  useEffect(() => {
+    if (report) return;
+
+    if (form.team_name.trim()) storeTeamName(form.team_name);
+    if (form.attendees.length > 0) storeAttendees(form.attendees);
+
+    const storedTeam = form.team_name.trim() ? "" : readStoredTeamName();
+    const storedAttendees =
+      form.attendees.length > 0 ? [] : readStoredAttendees();
+    if (!storedTeam && storedAttendees.length === 0) return;
+
+    setForm((prev) => {
+      const next = {
+        ...prev,
+        team_name: prev.team_name.trim() || storedTeam,
+        attendees: prev.attendees.length > 0 ? prev.attendees : storedAttendees,
+      };
+      formRef.current = next;
+      return next;
+    });
+    // 새 보고서 첫 로드에서만 로컬 기본값 보정
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [report]);
+
   function patch<K extends keyof ReportInput>(key: K, value: ReportInput[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((prev) => {
+      const next = { ...prev, [key]: value };
+      if (key === "team_name" && typeof value === "string") {
+        storeTeamName(value);
+      }
+      if (key === "attendees" && Array.isArray(value)) {
+        storeAttendees(value);
+      }
+      return next;
+    });
   }
 
   async function persist(next: ReportInput = formRef.current) {
@@ -119,6 +178,7 @@ export function ReportForm({ report }: ReportFormProps) {
         return false;
       }
 
+      storeReportDefaults(next);
       setSlug(result.slug);
       slugRef.current = result.slug;
       setUpdatedAt(result.updatedAt);
@@ -133,6 +193,7 @@ export function ReportForm({ report }: ReportFormProps) {
       setSaveError(result.error);
       return false;
     }
+    storeReportDefaults(next);
     setUpdatedAt(result.updatedAt);
     setSaveState("saved");
     return true;
@@ -259,6 +320,7 @@ export function ReportForm({ report }: ReportFormProps) {
                 value={form.team_name}
                 onChange={(e) => patch("team_name", e.target.value)}
               />
+              <p className="hint">한 번 저장하면 새 보고서에 자동으로 채워집니다.</p>
             </div>
             <div className="field">
               <label htmlFor="author">작성자</label>
@@ -280,7 +342,7 @@ export function ReportForm({ report }: ReportFormProps) {
           </div>
           <TagListInput
             label="참석 인원"
-            hint="쉼표로 여러 명을 한 번에 입력할 수 있습니다. 활동일지 참석자와 동일하게 사용됩니다."
+            hint="쉼표로 여러 명을 한 번에 입력할 수 있습니다. 한 번 저장하면 새 보고서에 자동으로 채워집니다."
             values={form.attendees}
             onChange={(values) => patch("attendees", values)}
           />

@@ -1,5 +1,19 @@
 import { Suspense } from "react";
+import { getNewReportDefaults } from "@/app/actions/reports";
 import { ReportForm } from "@/components/ReportForm";
+
+async function NewReportContent() {
+  const defaults = await getNewReportDefaults();
+
+  return (
+    <main className="report-page">
+      <ReportForm
+        defaultTeamName={defaults.teamName}
+        defaultAttendees={defaults.attendees}
+      />
+    </main>
+  );
+}
 
 export default function NewReportPage() {
   return (
@@ -11,9 +25,7 @@ export default function NewReportPage() {
         </main>
       }
     >
-      <main className="report-page">
-        <ReportForm />
-      </main>
+      <NewReportContent />
     </Suspense>
   );
 }
