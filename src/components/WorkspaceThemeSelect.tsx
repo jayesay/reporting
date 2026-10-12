@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import { updateWorkspaceTheme } from "@/app/actions/admin";
 import {
   WORKSPACE_THEMES,
@@ -17,7 +16,6 @@ export function WorkspaceThemeSelect({
   workspaceId,
   theme,
 }: WorkspaceThemeSelectProps) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [value, setValue] = useState(theme);
   const [error, setError] = useState<string | null>(null);
@@ -43,9 +41,8 @@ export function WorkspaceThemeSelect({
             if (!result.ok) {
               setValue(previous);
               setError(result.error);
-              return;
             }
-            router.refresh();
+            // router.refresh()는 cacheComponents 환경에서 /admin 재렌더 500을 유발함
           });
         }}
       >

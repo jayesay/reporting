@@ -145,7 +145,11 @@ export async function createWorkspace(
 }
 
 export async function adminListWorkspaces() {
-  await requireAdmin();
+  // 페이지 AdminGate에서 이미 인증함. 여기서 redirect 하면 soft refresh 시 500 가능.
+  const auth = await ensureAdminSession();
+  if (!auth.ok) {
+    return { ok: false as const, error: auth.error };
+  }
   return listWorkspaces();
 }
 
