@@ -116,6 +116,34 @@ a {
   width: 100%;
 }
 
+.admin-page .section {
+  margin-top: 1.5rem;
+}
+
+.admin-create-section {
+  padding: 1.1rem 1.15rem 1.2rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.admin-create-form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.admin-create-form h2 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.success-text {
+  margin: 0;
+  color: var(--teal-deep);
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
 .home-header {
   display: flex;
   flex-wrap: wrap;

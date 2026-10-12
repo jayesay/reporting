@@ -10,6 +10,7 @@ export type AiServiceEntry = {
 
 export type Report = {
   id: string;
+  workspace_id: string;
   slug: string;
   status: ReportStatus;
   team_name: string;
@@ -33,7 +34,10 @@ export type Report = {
   updated_at: string;
 };
 
-export type ReportInput = Omit<Report, "id" | "slug" | "created_at" | "updated_at">;
+export type ReportInput = Omit<
+  Report,
+  "id" | "slug" | "workspace_id" | "created_at" | "updated_at"
+>;
 
 let aiServiceSeq = 0;
 

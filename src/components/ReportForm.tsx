@@ -10,12 +10,11 @@ import {
 } from "@/app/actions/reports";
 import { formatSeoulDateTime } from "@/lib/format-datetime";
 import {
-  readStoredAttendees,
-  readStoredTeamName,
-  storeAttendees,
-  storeReportDefaults,
-  storeTeamName,
-} from "@/lib/report-defaults";
+  workspaceHomePath,
+  workspaceReportPath,
+  workspaceReportViewPath,
+} from "@/lib/paths";
+import { readStoredAttendees, storeAttendees } from "@/lib/report-defaults";
 import {
   createEmptyAiService,
   createEmptyReportInput,
@@ -25,9 +24,9 @@ import {
 import { TagListInput } from "@/components/TagListInput";
 
 type ReportFormProps = {
+  workspaceSlug: string;
+  workspaceName: string;
   report?: Report;
-  /** 새 보고서일 때 서버에서 가져온 기본값 */
-  defaultTeamName?: string;
   defaultAttendees?: string[];
 };
 
@@ -60,14 +59,14 @@ function snapToTenMinutes(value: string) {
 }
 
 function toInput(
-  report?: Report,
-  defaultTeamName = "",
+  report: Report | undefined,
+  workspaceName: string,
   defaultAttendees: string[] = [],
 ): ReportInput {
   if (!report) {
     return {
       ...createEmptyReportInput(),
-      team_name: defaultTeamName.trim(),
+      team_name: workspaceName,
       attendees: defaultAttendees
         .map((item) => item.trim())
         .filter(Boolean),
@@ -76,7 +75,7 @@ function toInput(
 
   return {
     status: report.status,
-    team_name: report.team_name,
+    team_name: workspaceName,
     author: report.author,
     report_month: report.report_month,
     attendees: report.attendees,
@@ -100,14 +99,16 @@ function toInput(
 }
 
 export function ReportForm({
+  workspaceSlug,
+  workspaceName,
   report,
-  defaultTeamName = "",
   defaultAttendees = [],
 }: ReportFormProps) {
   const router = useRouter();
+  const homePath = workspaceHomePath(workspaceSlug);
   const [slug, setSlug] = useState<string | null>(report?.slug ?? null);
   const [form, setForm] = useState<ReportInput>(() =>
-    toInput(report, defaultTeamName, defaultAttendees),
+    toInput(report, workspaceName, defaultAttendees),
   );
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -122,40 +123,36 @@ export function ReportForm({
 
   useEffect(() => {
     if (report) return;
-
-    if (form.team_name.trim()) storeTeamName(form.team_name);
-    if (form.attendees.length > 0) storeAttendees(form.attendees);
-
-    const storedTeam = form.team_name.trim() ? "" : readStoredTeamName();
-    const storedAttendees =
-      form.attendees.length > 0 ? [] : readStoredAttendees();
-    if (!storedTeam && storedAttendees.length === 0) return;
+    if (form.attendees.length > 0) {
+      storeAttendees(workspaceSlug, form.attendees);
+      return;
+    }
+    const storedAttendees = readStoredAttendees(workspaceSlug);
+    if (storedAttendees.length === 0) return;
 
     setForm((prev) => {
-      const next = {
-        ...prev,
-        team_name: prev.team_name.trim() || storedTeam,
-        attendees: prev.attendees.length > 0 ? prev.attendees : storedAttendees,
-      };
+      if (prev.attendees.length > 0) return prev;
+      const next = { ...prev, attendees: storedAttendees };
       formRef.current = next;
       return next;
     });
-    // 새 보고서 첫 로드에서만 로컬 기본값 보정
+    // 새 보고서 첫 로드에서만 로컬 참석자 보정
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [report]);
+  }, [report, workspaceSlug]);
 
   function patch<K extends keyof ReportInput>(key: K, value: ReportInput[K]) {
-    if (key === "team_name") {
-      storeTeamName(String(value ?? ""));
-    }
     if (key === "attendees") {
       const attendees = (Array.isArray(value) ? value : []).filter(
         (item): item is string => typeof item === "string",
       );
-      storeAttendees(attendees);
+      storeAttendees(workspaceSlug, attendees);
     }
 
-    setForm((prev) => ({ ...prev, [key]: value }));
+    setForm((prev) => ({
+      ...prev,
+      [key]: value,
+      team_name: workspaceName,
+    }));
   }
 
   async function persist(next: ReportInput = formRef.current) {
@@ -163,6 +160,7 @@ export function ReportForm({
       return false;
     }
 
+    const payload = { ...next, team_name: workspaceName };
     setSaveState("saving");
     setSaveError(null);
 
@@ -170,7 +168,7 @@ export function ReportForm({
 
     if (!currentSlug) {
       creatingRef.current = true;
-      const result = await createReport(next);
+      const result = await createReport(workspaceSlug, payload);
       creatingRef.current = false;
 
       if (!result.ok) {
@@ -179,22 +177,22 @@ export function ReportForm({
         return false;
       }
 
-      storeReportDefaults(next);
+      storeAttendees(workspaceSlug, payload.attendees);
       setSlug(result.slug);
       slugRef.current = result.slug;
       setUpdatedAt(result.updatedAt);
       setSaveState("saved");
-      router.replace(`/r/${result.slug}`);
+      router.replace(workspaceReportPath(workspaceSlug, result.slug));
       return true;
     }
 
-    const result = await saveReport(currentSlug, next);
+    const result = await saveReport(workspaceSlug, currentSlug, payload);
     if (!result.ok) {
       setSaveState("error");
       setSaveError(result.error);
       return false;
     }
-    storeReportDefaults(next);
+    storeAttendees(workspaceSlug, payload.attendees);
     setUpdatedAt(result.updatedAt);
     setSaveState("saved");
     return true;
@@ -208,7 +206,7 @@ export function ReportForm({
 
   function handleDelete() {
     if (!slug) {
-      router.push("/");
+      router.push(homePath);
       return;
     }
 
@@ -216,19 +214,19 @@ export function ReportForm({
     if (!ok) return;
 
     startTransition(async () => {
-      const result = await deleteReport(slug);
+      const result = await deleteReport(workspaceSlug, slug);
       if (!result.ok) {
         setSaveError(result.error);
         return;
       }
-      router.push("/");
+      router.push(homePath);
       router.refresh();
     });
   }
 
   async function copyShareLink() {
     if (!slug) return;
-    const url = `${window.location.origin}/r/${slug}`;
+    const url = `${window.location.origin}${workspaceReportPath(workspaceSlug, slug)}`;
     await navigator.clipboard.writeText(url);
     setShareState("copied");
     window.setTimeout(() => setShareState("idle"), 1600);
@@ -238,12 +236,12 @@ export function ReportForm({
 
   return (
     <div className="report-shell">
-      <Link href="/" className="back-link">
+      <Link href={homePath} className="back-link">
         ← 목록으로
       </Link>
       <header className="report-top">
         <div>
-          <p className="brand-mark">INNOSIGHT</p>
+          <p className="brand-mark">{workspaceName}</p>
           <h1>활동보고서</h1>
         </div>
         <div className="report-actions">
@@ -260,7 +258,10 @@ export function ReportForm({
           </div>
           {slug ? (
             <>
-              <Link href={`/r/${slug}/view`} className="btn ghost">
+              <Link
+                href={workspaceReportViewPath(workspaceSlug, slug)}
+                className="btn ghost"
+              >
                 조회하기
               </Link>
               <button type="button" className="btn ghost" onClick={copyShareLink}>
@@ -316,12 +317,10 @@ export function ReportForm({
           <div className="grid-3">
             <div className="field">
               <label htmlFor="team_name">팀명</label>
-              <input
-                id="team_name"
-                value={form.team_name}
-                onChange={(e) => patch("team_name", e.target.value)}
-              />
-              <p className="hint">한 번 저장하면 새 보고서에 자동으로 채워집니다.</p>
+              <p id="team_name" className="readonly-chip">
+                {workspaceName}
+              </p>
+              <p className="hint">워크스페이스 이름과 동일합니다.</p>
             </div>
             <div className="field">
               <label htmlFor="author">작성자</label>

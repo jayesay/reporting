@@ -19,6 +19,8 @@ type LocalPhoto = {
 };
 
 type ReportViewProps = {
+  workspaceSlug: string;
+  workspaceName: string;
   report: Report;
 };
 
@@ -41,14 +43,18 @@ function readFileAsDataUrl(file: File) {
   });
 }
 
-export function ReportView({ report }: ReportViewProps) {
+export function ReportView({
+  workspaceSlug,
+  workspaceName,
+  report,
+}: ReportViewProps) {
   const [photos, setPhotos] = useState<LocalPhoto[]>([]);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const titleMonth = formatYearMonth(report.report_month);
-  const titleTeam = textOrDash(report.team_name);
+  const titleTeam = textOrDash(workspaceName || report.team_name);
   const attendees = report.attendees.filter(Boolean).join(", ") || "-";
 
   useEffect(() => {
@@ -113,11 +119,11 @@ export function ReportView({ report }: ReportViewProps) {
       <style dangerouslySetInnerHTML={{ __html: REPORT_VIEW_CSS }} />
 
       <div className="view-topbar no-print">
-        <Link href={`/r/${report.slug}`} className="back">
+        <Link href={`/w/${workspaceSlug}/r/${report.slug}`} className="back">
           ← 수정으로
         </Link>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <Link href="/">목록</Link>
+          <Link href={`/w/${workspaceSlug}`}>목록</Link>
           <button type="button" onClick={() => window.print()}>
             인쇄
           </button>
@@ -126,7 +132,7 @@ export function ReportView({ report }: ReportViewProps) {
 
       <article className="page">
         <header className="doc-header">
-          <p className="brand">INNOSIGHT</p>
+          <p className="brand">{workspaceName}</p>
           <h1>활동보고서</h1>
         </header>
 

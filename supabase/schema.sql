@@ -1,8 +1,21 @@
--- INNOSIGHT 활동보고서
+-- 활동보고서 (워크스페이스)
 -- Supabase SQL Editor에서 실행하세요.
+
+create table if not exists public.workspaces (
+  id uuid primary key default gen_random_uuid(),
+  slug text not null unique,
+  name text not null,
+  password_hash text not null,
+  created_at timestamptz not null default now(),
+  constraint workspaces_slug_format check (slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'),
+  constraint workspaces_slug_length check (char_length(slug) between 2 and 32)
+);
+
+create index if not exists workspaces_slug_idx on public.workspaces (slug);
 
 create table if not exists public.reports (
   id uuid primary key default gen_random_uuid(),
+  workspace_id uuid not null references public.workspaces (id) on delete cascade,
   slug text not null unique,
   status text not null default 'draft' check (status in ('draft', 'done')),
 
@@ -33,6 +46,7 @@ create table if not exists public.reports (
 );
 
 create index if not exists reports_slug_idx on public.reports (slug);
+create index if not exists reports_workspace_id_idx on public.reports (workspace_id);
 
 create or replace function public.set_reports_updated_at()
 returns trigger
@@ -50,9 +64,34 @@ create trigger reports_set_updated_at
   for each row
   execute function public.set_reports_updated_at();
 
+alter table public.workspaces enable row level security;
 alter table public.reports enable row level security;
 
--- 로그인 없음: 비밀 slug가 접근 키. 목록 API는 앱에서 제공하지 않음.
+drop policy if exists "workspaces_select_all" on public.workspaces;
+create policy "workspaces_select_all"
+  on public.workspaces for select
+  to anon, authenticated
+  using (true);
+
+drop policy if exists "workspaces_insert_all" on public.workspaces;
+create policy "workspaces_insert_all"
+  on public.workspaces for insert
+  to anon, authenticated
+  with check (true);
+
+drop policy if exists "workspaces_update_all" on public.workspaces;
+create policy "workspaces_update_all"
+  on public.workspaces for update
+  to anon, authenticated
+  using (true)
+  with check (true);
+
+drop policy if exists "workspaces_delete_all" on public.workspaces;
+create policy "workspaces_delete_all"
+  on public.workspaces for delete
+  to anon, authenticated
+  using (true);
+
 drop policy if exists "reports_select_all" on public.reports;
 create policy "reports_select_all"
   on public.reports for select

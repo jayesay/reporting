@@ -9,8 +9,8 @@ const sans = Noto_Sans_KR({
 });
 
 export const metadata: Metadata = {
-  title: "INNOSIGHT 활동보고서",
-  description: "팀 스터디 활동보고서를 함께 작성하고 임시저장하는 공간",
+  title: "활동보고서",
+  description: "팀 워크스페이스별 스터디 활동보고서를 작성하고 공유하는 공간",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
