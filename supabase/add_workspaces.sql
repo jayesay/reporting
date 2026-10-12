@@ -6,6 +6,8 @@ create table if not exists public.workspaces (
   slug text not null unique,
   name text not null,
   password_hash text not null,
+  theme text not null default 'teal'
+    check (theme in ('teal', 'ocean', 'forest', 'slate', 'amber')),
   created_at timestamptz not null default now(),
   constraint workspaces_slug_format check (slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'),
   constraint workspaces_slug_length check (char_length(slug) between 2 and 32)

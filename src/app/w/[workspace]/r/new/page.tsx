@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { getNewReportDefaults } from "@/app/actions/reports";
 import { getWorkspacePublicBySlug } from "@/app/actions/workspaces";
 import { ReportForm } from "@/components/ReportForm";
+import { WorkspaceThemeShell } from "@/components/WorkspaceThemeShell";
 
 async function NewReportContent({
   params,
@@ -24,13 +25,15 @@ async function NewReportContent({
   const defaults = await getNewReportDefaults(workspace.slug);
 
   return (
-    <main className="report-page">
-      <ReportForm
-        workspaceSlug={workspace.slug}
-        workspaceName={workspace.name}
-        defaultAttendees={defaults.attendees}
-      />
-    </main>
+    <WorkspaceThemeShell theme={workspace.theme}>
+      <main className="report-page">
+        <ReportForm
+          workspaceSlug={workspace.slug}
+          workspaceName={workspace.name}
+          defaultAttendees={defaults.attendees}
+        />
+      </main>
+    </WorkspaceThemeShell>
   );
 }
 

@@ -2,6 +2,10 @@
 
 import { useActionState, useEffect, useState } from "react";
 import { createWorkspace } from "@/app/actions/admin";
+import {
+  DEFAULT_WORKSPACE_THEME,
+  WORKSPACE_THEMES,
+} from "@/lib/workspace-theme";
 
 export function CreateWorkspaceForm() {
   const [state, formAction, pending] = useActionState(createWorkspace, {
@@ -9,6 +13,7 @@ export function CreateWorkspaceForm() {
     createdSlug: null,
   });
   const [notice, setNotice] = useState<string | null>(null);
+  const [theme, setTheme] = useState(DEFAULT_WORKSPACE_THEME);
 
   useEffect(() => {
     if (!state.createdSlug) return;
@@ -48,6 +53,33 @@ export function CreateWorkspaceForm() {
           />
         </div>
       </div>
+
+      <fieldset className="theme-picker">
+        <legend>톤</legend>
+        <div className="theme-picker-options">
+          {WORKSPACE_THEMES.map((item) => (
+            <label
+              key={item.id}
+              className={`theme-option ${theme === item.id ? "selected" : ""}`}
+            >
+              <input
+                type="radio"
+                name="theme"
+                value={item.id}
+                checked={theme === item.id}
+                onChange={() => setTheme(item.id)}
+              />
+              <span
+                className="theme-swatch"
+                style={{ background: item.swatch }}
+                aria-hidden
+              />
+              <span>{item.label}</span>
+            </label>
+          ))}
+        </div>
+      </fieldset>
+
       <p className="hint">
         팀에게 <code>/w/slug</code> 주소와 비밀번호를 전달하세요. 보고서 팀명은
         이 이름과 동일하게 고정됩니다.

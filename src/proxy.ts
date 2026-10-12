@@ -10,7 +10,10 @@ import {
   isValidWorkspaceToken,
   WORKSPACE_COOKIE,
 } from "@/lib/workspace-auth";
-import { createSupabaseServerClient, isSupabaseConfigured } from "@/lib/supabase/server";
+import {
+  createSupabaseServerClient,
+  isSupabaseConfigured,
+} from "@/lib/supabase/server";
 
 async function loadWorkspacePasswordHash(slug: string) {
   if (!isSupabaseConfigured()) return null;
@@ -26,6 +29,27 @@ async function loadWorkspacePasswordHash(slug: string) {
   } catch {
     return null;
   }
+}
+
+function clearAdminCookie(response: NextResponse) {
+  response.cookies.set(ADMIN_COOKIE, "", {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    maxAge: 0,
+  });
+  return response;
+}
+
+function withAdminCleared(
+  request: NextRequest,
+  response: NextResponse,
+) {
+  if (request.cookies.get(ADMIN_COOKIE)?.value) {
+    return clearAdminCookie(response);
+  }
+  return response;
 }
 
 export async function proxy(request: NextRequest) {
@@ -65,13 +89,12 @@ export async function proxy(request: NextRequest) {
     const rest = workspaceMatch[2] ?? "";
 
     if (rest === "/login" || rest.startsWith("/login?")) {
-      return NextResponse.next();
+      return withAdminCleared(request, NextResponse.next());
     }
 
     const passwordHash = await loadWorkspacePasswordHash(workspaceSlug);
     if (!passwordHash) {
-      // 없는 워크스페이스는 페이지에서 처리
-      return NextResponse.next();
+      return withAdminCleared(request, NextResponse.next());
     }
 
     const raw = request.cookies.get(WORKSPACE_COOKIE)?.value;
@@ -81,16 +104,17 @@ export async function proxy(request: NextRequest) {
       parsed.slug === workspaceSlug &&
       (await isValidWorkspaceToken(parsed.token, workspaceSlug, passwordHash))
     ) {
-      return NextResponse.next();
+      return withAdminCleared(request, NextResponse.next());
     }
 
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = `/w/${workspaceSlug}/login`;
     loginUrl.searchParams.set("next", pathname);
-    return NextResponse.redirect(loginUrl);
+    return withAdminCleared(request, NextResponse.redirect(loginUrl));
   }
 
-  return NextResponse.next();
+  // 그 외 경로: 관리자 쿠키 제거 → 다음에 /admin 들어가면 다시 비밀번호 입력
+  return withAdminCleared(request, NextResponse.next());
 }
 
 export const config = {

@@ -14,12 +14,19 @@
   --shadow: 0 16px 40px rgba(18, 38, 43, 0.08);
   --background: #dfeceb;
   --foreground: var(--ink);
+  --muted: var(--ink-soft);
+  --theme-glow-a: color-mix(in srgb, var(--teal) 16%, transparent);
+  --theme-glow-b: rgba(217, 107, 76, 0.12);
+  --theme-grad-top: #edf5f4;
+  --theme-grad-mid: #d8e8e6;
+  --theme-grad-bottom: #f3efe8;
+  --heading-bg: #d4e9e6;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
 }
 
 * {
@@ -34,15 +41,96 @@ body {
   margin: 0;
   min-height: 100%;
   color: var(--ink);
-  font-family: var(--font-sans), "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-family: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   font-size: 15px;
   line-height: 1.55;
   letter-spacing: -0.01em;
   background:
-    radial-gradient(circle at 12% 18%, rgba(15, 110, 106, 0.16), transparent 34%),
-    radial-gradient(circle at 88% 10%, rgba(217, 107, 76, 0.12), transparent 28%),
-    linear-gradient(160deg, #edf5f4 0%, #d8e8e6 48%, #f3efe8 100%);
+    radial-gradient(circle at 12% 18%, var(--theme-glow-a), transparent 34%),
+    radial-gradient(circle at 88% 10%, var(--theme-glow-b), transparent 28%),
+    linear-gradient(
+      160deg,
+      var(--theme-grad-top) 0%,
+      var(--theme-grad-mid) 48%,
+      var(--theme-grad-bottom) 100%
+    );
   background-attachment: fixed;
+}
+
+.workspace-theme {
+  min-height: 100vh;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 12% 18%, var(--theme-glow-a), transparent 34%),
+    radial-gradient(circle at 88% 10%, var(--theme-glow-b), transparent 28%),
+    linear-gradient(
+      160deg,
+      var(--theme-grad-top) 0%,
+      var(--theme-grad-mid) 48%,
+      var(--theme-grad-bottom) 100%
+    );
+  background-attachment: fixed;
+}
+
+.theme-picker {
+  margin: 0;
+  padding: 0;
+  border: none;
+}
+
+.theme-picker legend {
+  padding: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+}
+
+.theme-picker-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.45rem;
+}
+
+.theme-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.4rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.7);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.theme-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.theme-option.selected {
+  border-color: var(--teal);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--teal) 12%, transparent);
+  font-weight: 700;
+}
+
+.theme-swatch {
+  width: 0.7rem;
+  height: 0.7rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.theme-inline-select {
+  font: inherit;
+  font-size: 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 0.45rem;
+  padding: 0.3rem 0.45rem;
+  background: #fff;
+  color: var(--ink);
 }
 
 body::before {
@@ -104,6 +192,27 @@ a {
   font-size: 1.65rem;
   font-weight: 700;
   letter-spacing: -0.03em;
+  line-height: 1.25;
+}
+
+.home-landing-card .brand-mark {
+  margin-bottom: 0;
+  line-height: 1.2;
+}
+
+.home-landing-card h1 {
+  margin-top: 0.2rem;
+}
+
+.home-landing-copy {
+  margin: 0.55rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.home-landing-copy code {
+  font-size: 0.88em;
 }
 
 .login-form {
@@ -217,7 +326,7 @@ a {
 .report-table thead th {
   padding: 0.8rem 0.9rem;
   border-bottom: 1px solid var(--line);
-  background: rgba(15, 110, 106, 0.06);
+  background: color-mix(in srgb, var(--teal) 6%, transparent);
   color: var(--ink-soft);
   font-size: 0.8rem;
   font-weight: 700;
@@ -238,7 +347,7 @@ a {
 }
 
 .report-table tbody tr:hover {
-  background: rgba(15, 110, 106, 0.05);
+  background: color-mix(in srgb, var(--teal) 5%, transparent);
 }
 
 .report-table tbody td a {
@@ -300,13 +409,15 @@ a {
 }
 
 .status-badge.draft {
-  background: rgba(15, 110, 106, 0.1);
-  color: var(--teal-deep);
+  background: var(--paper);
+  color: var(--ink-soft);
+  border: 1px solid var(--line);
 }
 
 .status-badge.done {
-  background: rgba(31, 122, 76, 0.12);
-  color: var(--ok);
+  background: var(--heading-bg);
+  color: var(--teal-deep);
+  border: 1px solid color-mix(in srgb, var(--teal) 35%, transparent);
 }
 
 .btn {
@@ -409,7 +520,7 @@ a {
 .save-pill {
   padding: 0.45rem 0.75rem;
   border-radius: 999px;
-  background: rgba(15, 110, 106, 0.1);
+  background: color-mix(in srgb, var(--teal) 10%, transparent);
   color: var(--teal-deep);
   font-size: 0.8rem;
   font-weight: 700;
@@ -491,6 +602,62 @@ a {
   margin-bottom: 0;
 }
 
+.field-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink-soft);
+  line-height: 1.2;
+}
+
+.meeting-datetime-field {
+  margin-bottom: 0.75rem;
+}
+
+.meeting-datetime-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+.meeting-datetime-row input {
+  flex: 1 1 0;
+  min-width: 0;
+  width: auto;
+  box-sizing: border-box;
+  border: 1px solid var(--line);
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.85rem;
+  height: 2.2rem;
+  min-height: 2.2rem;
+  padding: 0 0.4rem;
+  outline: none;
+}
+
+.meeting-datetime-row input[type="date"] {
+  flex: 1.15 1 0;
+}
+
+.meeting-datetime-row input[type="time"] {
+  flex: 0.9 1 0;
+}
+
+.meeting-datetime-row input:focus {
+  border-color: color-mix(in srgb, var(--teal) 55%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--teal) 12%, transparent);
+}
+
+.meeting-datetime-sep {
+  flex: 0 0 auto;
+  color: var(--ink-soft);
+  font-weight: 700;
+  line-height: 1;
+}
+
 .stack {
   display: grid;
   gap: 0.75rem;
@@ -561,8 +728,8 @@ a {
 
 .field input:focus,
 .field textarea:focus {
-  border-color: rgba(15, 110, 106, 0.55);
-  box-shadow: 0 0 0 3px rgba(15, 110, 106, 0.12);
+  border-color: color-mix(in srgb, var(--teal) 55%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--teal) 12%, transparent);
 }
 
 .readonly-chip {
@@ -572,7 +739,7 @@ a {
   align-items: center;
   padding: 0 0.65rem;
   border-radius: 0.5rem;
-  background: rgba(15, 110, 106, 0.08);
+  background: color-mix(in srgb, var(--teal) 8%, transparent);
   color: var(--ink-soft);
   font-size: 0.9rem;
   line-height: 1.4;
@@ -614,8 +781,8 @@ a {
 }
 
 .tag-input-box:focus-within {
-  border-color: rgba(15, 110, 106, 0.55);
-  box-shadow: 0 0 0 3px rgba(15, 110, 106, 0.12);
+  border-color: color-mix(in srgb, var(--teal) 55%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--teal) 12%, transparent);
 }
 
 .tag {
@@ -625,7 +792,7 @@ a {
   border: 1px solid var(--line);
   border-radius: 999px;
   padding: 0.2rem 0.55rem;
-  background: rgba(15, 110, 106, 0.08);
+  background: color-mix(in srgb, var(--teal) 8%, transparent);
   color: var(--ink);
   font: inherit;
   font-size: 0.82rem;
@@ -656,7 +823,7 @@ a {
 
 .repeat-block {
   padding: 0.9rem;
-  border: 1px dashed rgba(15, 110, 106, 0.28);
+  border: 1px dashed color-mix(in srgb, var(--teal) 28%, transparent);
   border-radius: 0.8rem;
   background: rgba(255, 255, 255, 0.45);
 }
@@ -707,12 +874,12 @@ a {
 .view-doc .view-header {
   margin-bottom: 28px;
   padding-bottom: 18px;
-  border-bottom: 2px solid #0f6e6a;
+  border-bottom: 2px solid var(--teal);
 }
 
 .view-doc .view-brand {
   margin: 0 0 6px;
-  color: #0a4f4c;
+  color: var(--teal-deep);
   font-size: 1.15rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -742,9 +909,9 @@ a {
 .view-doc .view-section h2 {
   margin: 0 0 12px;
   padding: 10px 12px;
-  background: #e7f1f0;
-  border-left: 4px solid #0f6e6a;
-  color: #0a4f4c;
+  background: var(--heading-bg, var(--mist));
+  border-left: 4px solid var(--teal);
+  color: var(--teal-deep);
   font-size: 17px;
   font-weight: 700;
   line-height: 1.35;
@@ -775,7 +942,7 @@ a {
 }
 
 .view-doc .view-section strong {
-  color: #0a4f4c;
+  color: var(--teal-deep);
   font-weight: 700;
 }
 

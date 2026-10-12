@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { getWorkspacePublicBySlug } from "@/app/actions/workspaces";
 import { LoginForm } from "@/components/LoginForm";
+import { WorkspaceThemeShell } from "@/components/WorkspaceThemeShell";
 import { workspaceHomePath } from "@/lib/paths";
 
 async function LoginContent({
@@ -36,14 +37,16 @@ async function LoginContent({
       : fallback;
 
   return (
-    <main className="login-page">
-      <div className="login-card">
-        <p className="brand-mark">{workspace.name}</p>
-        <h1>활동보고서</h1>
-        <p className="lede tight">워크스페이스 비밀번호를 입력해 주세요.</p>
-        <LoginForm workspaceSlug={workspace.slug} nextPath={nextPath} />
-      </div>
-    </main>
+    <WorkspaceThemeShell theme={workspace.theme}>
+      <main className="login-page">
+        <div className="login-card">
+          <p className="brand-mark">{workspace.name}</p>
+          <h1>활동보고서</h1>
+          <p className="lede tight">워크스페이스 비밀번호를 입력해 주세요.</p>
+          <LoginForm workspaceSlug={workspace.slug} nextPath={nextPath} />
+        </div>
+      </main>
+    </WorkspaceThemeShell>
   );
 }
 

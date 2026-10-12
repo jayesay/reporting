@@ -16,6 +16,10 @@ import {
 } from "@/lib/paths";
 import { readStoredAttendees, storeAttendees } from "@/lib/report-defaults";
 import {
+  joinMeetingDateTime,
+  splitMeetingFields,
+} from "@/lib/report-format";
+import {
   createEmptyAiService,
   createEmptyReportInput,
   type Report,
@@ -32,30 +36,23 @@ type ReportFormProps = {
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
-/** datetime-local 값을 10분 단위로 맞춤 (YYYY-MM-DDTHH:mm) */
-function snapToTenMinutes(value: string) {
-  const match = value.match(/^(\d{4}-\d{2}-\d{2}T\d{2}):(\d{2})/);
+/** time 값을 10분 단위로 맞춤 (HH:mm) */
+function snapTimeToTenMinutes(value: string) {
+  const match = value.match(/^(\d{2}):(\d{2})/);
   if (!match) return value;
 
-  const hourPart = match[1];
+  const hour = Number(match[1]);
   const minutes = Number(match[2]);
-  if (Number.isNaN(minutes)) return value;
+  if (Number.isNaN(hour) || Number.isNaN(minutes)) return value;
 
-  const snapped = Math.round(minutes / 10) * 10;
+  let snapped = Math.round(minutes / 10) * 10;
+  let nextHour = hour;
   if (snapped === 60) {
-    const date = new Date(`${hourPart}:00`);
-    if (Number.isNaN(date.getTime())) {
-      return `${hourPart}:50`;
-    }
-    date.setHours(date.getHours() + 1, 0, 0, 0);
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, "0");
-    const day = String(date.getDate()).padStart(2, "0");
-    const hour = String(date.getHours()).padStart(2, "0");
-    return `${year}-${month}-${day}T${hour}:00`;
+    snapped = 0;
+    nextHour = Math.min(23, hour + 1);
   }
 
-  return `${hourPart}:${String(snapped).padStart(2, "0")}`;
+  return `${String(nextHour).padStart(2, "0")}:${String(snapped).padStart(2, "0")}`;
 }
 
 function toInput(
@@ -110,6 +107,15 @@ export function ReportForm({
   const [form, setForm] = useState<ReportInput>(() =>
     toInput(report, workspaceName, defaultAttendees),
   );
+  const initialMeeting = splitMeetingFields(
+    report?.meeting_start ?? "",
+    report?.meeting_end ?? "",
+  );
+  const [meetingDate, setMeetingDate] = useState(initialMeeting.date);
+  const [meetingStartTime, setMeetingStartTime] = useState(
+    initialMeeting.startTime,
+  );
+  const [meetingEndTime, setMeetingEndTime] = useState(initialMeeting.endTime);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState(report?.updated_at ?? "");
@@ -120,6 +126,25 @@ export function ReportForm({
   const formRef = useRef(form);
   slugRef.current = slug;
   formRef.current = form;
+
+  function syncMeetingFields(
+    date: string,
+    startTime: string,
+    endTime: string,
+  ) {
+    const nextStart = joinMeetingDateTime(date, startTime);
+    const nextEnd = joinMeetingDateTime(date, endTime);
+    setForm((prev) => {
+      const next = {
+        ...prev,
+        team_name: workspaceName,
+        meeting_start: nextStart,
+        meeting_end: nextEnd,
+      };
+      formRef.current = next;
+      return next;
+    });
+  }
 
   useEffect(() => {
     if (report) return;
@@ -350,31 +375,54 @@ export function ReportForm({
 
         <section className="section">
           <h2>2. 활동일지</h2>
+          <div className="field meeting-datetime-field">
+            <span className="field-label">모임일시</span>
+            <div className="meeting-datetime-row">
+              <input
+                id="meeting_date"
+                type="date"
+                aria-label="모임 날짜"
+                value={meetingDate}
+                onChange={(e) => {
+                  const nextDate = e.target.value;
+                  setMeetingDate(nextDate);
+                  syncMeetingFields(
+                    nextDate,
+                    meetingStartTime,
+                    meetingEndTime,
+                  );
+                }}
+              />
+              <input
+                id="meeting_start_time"
+                type="time"
+                step={600}
+                aria-label="시작 시간"
+                value={meetingStartTime}
+                onChange={(e) => {
+                  const nextTime = snapTimeToTenMinutes(e.target.value);
+                  setMeetingStartTime(nextTime);
+                  syncMeetingFields(meetingDate, nextTime, meetingEndTime);
+                }}
+              />
+              <span className="meeting-datetime-sep" aria-hidden>
+                ~
+              </span>
+              <input
+                id="meeting_end_time"
+                type="time"
+                step={600}
+                aria-label="종료 시간"
+                value={meetingEndTime}
+                onChange={(e) => {
+                  const nextTime = snapTimeToTenMinutes(e.target.value);
+                  setMeetingEndTime(nextTime);
+                  syncMeetingFields(meetingDate, meetingStartTime, nextTime);
+                }}
+              />
+            </div>
+          </div>
           <div className="grid-2">
-            <div className="field">
-              <label htmlFor="meeting_start">모임 시작</label>
-              <input
-                id="meeting_start"
-                type="datetime-local"
-                step={600}
-                value={form.meeting_start}
-                onChange={(e) =>
-                  patch("meeting_start", snapToTenMinutes(e.target.value))
-                }
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="meeting_end">모임 종료</label>
-              <input
-                id="meeting_end"
-                type="datetime-local"
-                step={600}
-                value={form.meeting_end}
-                onChange={(e) =>
-                  patch("meeting_end", snapToTenMinutes(e.target.value))
-                }
-              />
-            </div>
             <div className="field">
               <label htmlFor="location">장소</label>
               <input

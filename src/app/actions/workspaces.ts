@@ -7,17 +7,17 @@ import {
 import {
   isValidWorkspaceSlug,
   normalizeWorkspaceSlug,
+  withWorkspaceTheme,
   type Workspace,
   type WorkspacePublic,
 } from "@/lib/types/workspace";
 
-type DbWorkspace = Workspace;
-
-function toPublic(row: DbWorkspace): WorkspacePublic {
+function toPublic(row: Workspace): WorkspacePublic {
   return {
     id: row.id,
     slug: row.slug,
     name: row.name,
+    theme: row.theme,
   };
 }
 
@@ -50,7 +50,10 @@ export async function getWorkspaceBySlug(
       return { ok: false, error: "워크스페이스를 찾을 수 없습니다." };
     }
 
-    return { ok: true, workspace: data as DbWorkspace };
+    return {
+      ok: true,
+      workspace: withWorkspaceTheme(data as Omit<Workspace, "theme"> & { theme?: string }),
+    };
   } catch (error) {
     return {
       ok: false,
@@ -83,7 +86,7 @@ export async function listWorkspaces(): Promise<
     const supabase = createSupabaseServerClient();
     const { data, error } = await supabase
       .from("workspaces")
-      .select("id, slug, name, created_at")
+      .select("id, slug, name, theme, created_at")
       .order("created_at", { ascending: true });
 
     if (error) {
@@ -92,11 +95,18 @@ export async function listWorkspaces(): Promise<
 
     return {
       ok: true,
-      workspaces: (data ?? []).map((row) => ({
-        id: row.id as string,
-        slug: row.slug as string,
-        name: row.name as string,
-      })),
+      workspaces: (data ?? []).map((row) =>
+        toPublic(
+          withWorkspaceTheme({
+            id: row.id as string,
+            slug: row.slug as string,
+            name: row.name as string,
+            password_hash: "",
+            theme: row.theme,
+            created_at: String(row.created_at ?? ""),
+          }),
+        ),
+      ),
     };
   } catch (error) {
     return {

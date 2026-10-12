@@ -7,14 +7,19 @@ export const REPORT_VIEW_CSS = `
   --teal-deep: #0a4f4c;
   --line: #d7e3e1;
   --paper: #ffffff;
+  --mist: #e7f1f0;
+  --heading-bg: #d4e9e6;
+  --theme-glow-a: rgba(15,110,106,.12);
+  --theme-grad-top: #edf5f4;
+  --theme-grad-bottom: #e7eeec;
   position: relative;
   z-index: 2;
   min-height: 100vh;
   margin: 0;
   padding: 32px 20px 48px;
   background:
-    radial-gradient(circle at 10% 0%, rgba(15,110,106,.12), transparent 36%),
-    linear-gradient(180deg, #edf5f4 0%, #e7eeec 100%);
+    radial-gradient(circle at 10% 0%, var(--theme-glow-a), transparent 36%),
+    linear-gradient(180deg, var(--theme-grad-top) 0%, var(--theme-grad-bottom) 100%);
   color: var(--ink);
   font-family: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   font-size: 15px;
@@ -68,7 +73,7 @@ export const REPORT_VIEW_CSS = `
 .view-html-root h2 {
   margin: 0 0 12px;
   padding: 10px 12px;
-  background: #e7f1f0;
+  background: var(--heading-bg, var(--mist));
   border-left: 4px solid var(--teal);
   color: var(--teal-deep);
   font-size: 17px;
@@ -84,7 +89,7 @@ export const REPORT_VIEW_CSS = `
 .view-html-root ul {
   margin: 0 0 12px;
   padding: 12px 12px 12px 28px;
-  background: #f7faf9;
+  background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 10px;
   list-style: disc;
@@ -106,7 +111,7 @@ export const REPORT_VIEW_CSS = `
 .view-html-root .ai-card {
   margin: 0 0 12px;
   padding: 12px 14px;
-  background: #f7faf9;
+  background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 10px;
 }
@@ -137,9 +142,9 @@ export const REPORT_VIEW_CSS = `
 .view-html-root .photo {
   margin: 0 0 12px;
   padding: 28px 16px;
-  border: 1px dashed #9aa8a6;
+  border: 1px dashed var(--line);
   border-radius: 10px;
-  background: #fafafa;
+  background: var(--paper);
   color: var(--muted);
   text-align: center;
   font-size: 14px;
@@ -169,7 +174,7 @@ export const REPORT_VIEW_CSS = `
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 8px 12px;
-  background: #e7f1f0;
+  background: var(--heading-bg, var(--mist));
   color: var(--teal-deep);
   font: inherit;
   font-size: 14px;

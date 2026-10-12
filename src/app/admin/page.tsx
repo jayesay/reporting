@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { adminListWorkspaces, requireAdmin } from "@/app/actions/admin";
 import { CreateWorkspaceForm } from "@/components/CreateWorkspaceForm";
+import { WorkspaceThemeSelect } from "@/components/WorkspaceThemeSelect";
 import { workspaceHomePath } from "@/lib/paths";
 
 async function AdminContent() {
@@ -37,6 +38,7 @@ async function AdminContent() {
                 <tr>
                   <th>이름</th>
                   <th>slug</th>
+                  <th>톤</th>
                   <th>링크</th>
                 </tr>
               </thead>
@@ -46,6 +48,12 @@ async function AdminContent() {
                     <td>{workspace.name}</td>
                     <td>
                       <code>{workspace.slug}</code>
+                    </td>
+                    <td>
+                      <WorkspaceThemeSelect
+                        workspaceId={workspace.id}
+                        theme={workspace.theme}
+                      />
                     </td>
                     <td>
                       <Link href={workspaceHomePath(workspace.slug)}>

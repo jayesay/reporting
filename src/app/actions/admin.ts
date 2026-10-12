@@ -19,6 +19,10 @@ import {
   isValidWorkspaceSlug,
   normalizeWorkspaceSlug,
 } from "@/lib/types/workspace";
+import {
+  isWorkspaceThemeId,
+  DEFAULT_WORKSPACE_THEME,
+} from "@/lib/workspace-theme";
 import { listWorkspaces } from "@/app/actions/workspaces";
 
 export async function requireAdmin() {
@@ -47,12 +51,12 @@ export async function loginAdmin(
 
   const token = await createAdminToken();
   const cookieStore = await cookies();
+  // 세션 쿠키만 사용 (브라우저 종료 시 만료). 관리자 영역을 벗어나면 proxy에서 삭제.
   cookieStore.set(ADMIN_COOKIE, token, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    maxAge: 60 * 60 * 24 * 30,
   });
 
   redirect("/admin");
@@ -74,6 +78,10 @@ export async function createWorkspace(
   const slug = normalizeWorkspaceSlug(String(formData.get("slug") ?? ""));
   const name = String(formData.get("name") ?? "").trim();
   const password = String(formData.get("password") ?? "");
+  const themeRaw = String(formData.get("theme") ?? DEFAULT_WORKSPACE_THEME);
+  const theme = isWorkspaceThemeId(themeRaw)
+    ? themeRaw
+    : DEFAULT_WORKSPACE_THEME;
 
   if (!isValidWorkspaceSlug(slug)) {
     return {
@@ -98,6 +106,7 @@ export async function createWorkspace(
       slug,
       name,
       password_hash: passwordHash,
+      theme,
     });
 
     if (error) {
@@ -126,4 +135,39 @@ export async function createWorkspace(
 export async function adminListWorkspaces() {
   await requireAdmin();
   return listWorkspaces();
+}
+
+export async function updateWorkspaceTheme(
+  workspaceId: string,
+  themeRaw: string,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  await requireAdmin();
+
+  const theme = isWorkspaceThemeId(themeRaw)
+    ? themeRaw
+    : DEFAULT_WORKSPACE_THEME;
+
+  if (!isSupabaseConfigured()) {
+    return { ok: false, error: "톤을 바꾸지 못했습니다." };
+  }
+
+  try {
+    const supabase = createSupabaseServerClient();
+    const { error } = await supabase
+      .from("workspaces")
+      .update({ theme })
+      .eq("id", workspaceId);
+
+    if (error) {
+      return { ok: false, error: error.message };
+    }
+
+    revalidatePath("/admin");
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "톤을 바꾸지 못했습니다.",
+    };
+  }
 }

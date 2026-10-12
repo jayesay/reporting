@@ -1,16 +1,20 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import {
   formatDate,
-  formatDateTime,
+  formatMeetingRange,
   formatYearMonth,
   multilineLines,
   textOrDash,
 } from "@/lib/report-format";
 import { REPORT_VIEW_CSS } from "@/lib/report-view-styles";
 import type { Report } from "@/lib/types/report";
+import {
+  themeCssVars,
+  type WorkspaceThemeId,
+} from "@/lib/workspace-theme";
 
 type LocalPhoto = {
   id: string;
@@ -21,6 +25,7 @@ type LocalPhoto = {
 type ReportViewProps = {
   workspaceSlug: string;
   workspaceName: string;
+  theme: WorkspaceThemeId;
   report: Report;
 };
 
@@ -46,6 +51,7 @@ function readFileAsDataUrl(file: File) {
 export function ReportView({
   workspaceSlug,
   workspaceName,
+  theme,
   report,
 }: ReportViewProps) {
   const [photos, setPhotos] = useState<LocalPhoto[]>([]);
@@ -115,7 +121,11 @@ export function ReportView({
   }
 
   return (
-    <div className="view-html-root">
+    <div
+      className="view-html-root"
+      data-theme={theme}
+      style={themeCssVars(theme) as CSSProperties}
+    >
       <style dangerouslySetInnerHTML={{ __html: REPORT_VIEW_CSS }} />
 
       <div className="view-topbar no-print">
@@ -132,7 +142,7 @@ export function ReportView({
 
       <article className="page">
         <header className="doc-header">
-          <p className="brand">{workspaceName}</p>
+          <p className="brand">INNOSIGHT</p>
           <h1>활동보고서</h1>
         </header>
 
@@ -158,10 +168,8 @@ export function ReportView({
           <h2>2. 활동일지</h2>
           <ul>
             <li>
-              <strong>모임 시작</strong>: {formatDateTime(report.meeting_start)}
-            </li>
-            <li>
-              <strong>모임 종료</strong>: {formatDateTime(report.meeting_end)}
+              <strong>모임일시</strong>:{" "}
+              {formatMeetingRange(report.meeting_start, report.meeting_end)}
             </li>
             <li>
               <strong>장소</strong>: {textOrDash(report.location)}

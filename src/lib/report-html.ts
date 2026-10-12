@@ -1,3 +1,4 @@
+import { formatMeetingRange } from "@/lib/report-format";
 import type { ReportInput } from "@/lib/types/report";
 
 const font =
@@ -61,20 +62,6 @@ function formatDate(value: string) {
   return `${match[1]}년 ${match[2]}월 ${match[3]}일`;
 }
 
-function formatDateTime(value: string) {
-  const trimmed = value.trim();
-  if (!trimmed) return "-";
-  const match = trimmed.match(
-    /^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})/,
-  );
-  if (!match) {
-    const asDate = formatDate(trimmed);
-    return asDate === "-" ? escapeHtml(trimmed) : asDate;
-  }
-  const [, year, month, day, hour, minute] = match;
-  return `${year}년 ${month}월 ${day}일 ${hour}시 ${minute}분`;
-}
-
 function rowInline(label: string, valueHtml: string) {
   return `<li style="${styles.li}"><strong style="${styles.strong}">${label}</strong>: ${valueHtml}</li>`;
 }
@@ -126,8 +113,10 @@ export function reportToHtml(report: ReportInput) {
     `</ul>`,
     `<h2 style="${styles.h2}">2. 활동일지</h2>`,
     `<ul style="${styles.ul}">`,
-    rowInline("모임 시작", formatDateTime(report.meeting_start)),
-    rowInline("모임 종료", formatDateTime(report.meeting_end)),
+    rowInline(
+      "모임일시",
+      formatMeetingRange(report.meeting_start, report.meeting_end),
+    ),
     rowInline("장소", textOrDash(report.location)),
     rowInline("참석자", attendees),
     rowInline("활동 주제", textOrDash(report.topic)),

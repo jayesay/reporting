@@ -3,6 +3,7 @@ import { listReports } from "@/app/actions/reports";
 import { getWorkspacePublicBySlug } from "@/app/actions/workspaces";
 import { CreateReportButton } from "@/components/CreateReportButton";
 import { ReportList } from "@/components/ReportList";
+import { WorkspaceThemeShell } from "@/components/WorkspaceThemeShell";
 
 async function WorkspaceHome({
   params,
@@ -26,29 +27,32 @@ async function WorkspaceHome({
   const result = await listReports(workspace.slug);
 
   return (
-    <main className="home">
-      <header className="home-header">
-        <div>
-          <p className="brand-mark">{workspace.name}</p>
-          <h1>활동보고서</h1>
-        </div>
-        <CreateReportButton workspaceSlug={workspace.slug} />
-      </header>
+    <WorkspaceThemeShell theme={workspace.theme}>
+      <main className="home">
+        <header className="home-header">
+          <div>
+            <p className="brand-mark">{workspace.name}</p>
+            <h1>활동보고서</h1>
+          </div>
+          <CreateReportButton workspaceSlug={workspace.slug} />
+        </header>
 
-      <section className="home-list-section">
-        {!result.ok ? (
-          <p className="error-text">{result.error}</p>
-        ) : (
-          <ReportList workspaceSlug={workspace.slug} reports={result.reports} />
-        )}
-      </section>
-    </main>
+        <section className="home-list-section">
+          {!result.ok ? (
+            <p className="error-text">{result.error}</p>
+          ) : (
+            <ReportList
+              workspaceSlug={workspace.slug}
+              reports={result.reports}
+            />
+          )}
+        </section>
+      </main>
+    </WorkspaceThemeShell>
   );
 }
 
-export default function WorkspacePage(
-  props: PageProps<"/w/[workspace]">,
-) {
+export default function WorkspacePage(props: PageProps<"/w/[workspace]">) {
   return (
     <Suspense
       fallback={
