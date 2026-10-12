@@ -2,7 +2,6 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { revalidatePath } from "next/cache";
 import {
   ADMIN_COOKIE,
   createAdminToken,
@@ -62,11 +61,25 @@ export async function loginAdmin(
   redirect("/admin");
 }
 
+async function ensureAdminSession(): Promise<
+  { ok: true } | { ok: false; error: string }
+> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get(ADMIN_COOKIE)?.value;
+  if (!(await isValidAdminToken(token))) {
+    return { ok: false, error: "관리자 로그인이 필요합니다." };
+  }
+  return { ok: true };
+}
+
 export async function createWorkspace(
   _prev: { error: string | null; createdSlug: string | null },
   formData: FormData,
 ): Promise<{ error: string | null; createdSlug: string | null }> {
-  await requireAdmin();
+  const auth = await ensureAdminSession();
+  if (!auth.ok) {
+    return { error: auth.error, createdSlug: null };
+  }
 
   if (!isSupabaseConfigured()) {
     return {
@@ -119,7 +132,6 @@ export async function createWorkspace(
       return { error: error.message, createdSlug: null };
     }
 
-    revalidatePath("/admin");
     return { error: null, createdSlug: slug };
   } catch (error) {
     return {
@@ -141,7 +153,10 @@ export async function updateWorkspaceTheme(
   workspaceId: string,
   themeRaw: string,
 ): Promise<{ ok: true } | { ok: false; error: string }> {
-  await requireAdmin();
+  const auth = await ensureAdminSession();
+  if (!auth.ok) {
+    return { ok: false, error: auth.error };
+  }
 
   const theme = isWorkspaceThemeId(themeRaw)
     ? themeRaw
@@ -159,10 +174,20 @@ export async function updateWorkspaceTheme(
       .eq("id", workspaceId);
 
     if (error) {
+      if (
+        error.message.includes("theme") ||
+        error.code === "PGRST204" ||
+        error.code === "42703"
+      ) {
+        return {
+          ok: false,
+          error:
+            "theme 컬럼이 없습니다. Supabase에서 add_workspace_theme.sql을 실행하세요.",
+        };
+      }
       return { ok: false, error: error.message };
     }
 
-    revalidatePath("/admin");
     return { ok: true };
   } catch (error) {
     return {

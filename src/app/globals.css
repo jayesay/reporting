@@ -123,6 +123,12 @@ body {
   flex-shrink: 0;
 }
 
+.theme-inline-wrap {
+  display: grid;
+  gap: 0.25rem;
+  justify-items: center;
+}
+
 .theme-inline-select {
   font: inherit;
   font-size: 0.85rem;
@@ -131,6 +137,13 @@ body {
   padding: 0.3rem 0.45rem;
   background: #fff;
   color: var(--ink);
+}
+
+.theme-inline-error {
+  margin: 0;
+  font-size: 0.75rem;
+  text-align: center;
+  white-space: normal;
 }
 
 body::before {

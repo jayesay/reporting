@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { createWorkspace } from "@/app/actions/admin";
 import {
   DEFAULT_WORKSPACE_THEME,
@@ -8,6 +9,7 @@ import {
 } from "@/lib/workspace-theme";
 
 export function CreateWorkspaceForm() {
+  const router = useRouter();
   const [state, formAction, pending] = useActionState(createWorkspace, {
     error: null,
     createdSlug: null,
@@ -20,7 +22,8 @@ export function CreateWorkspaceForm() {
     setNotice(
       `워크스페이스가 만들어졌습니다. 팀 링크: /w/${state.createdSlug}`,
     );
-  }, [state.createdSlug]);
+    router.refresh();
+  }, [state.createdSlug, router]);
 
   return (
     <form className="admin-create-form" action={formAction}>
