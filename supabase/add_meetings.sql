@@ -1,0 +1,2 @@
+-- deprecated: 회차는 보고서 단위 session_no로 관리합니다.
+-- 대신 add_session_no.sql 을 실행하세요.

@@ -1,4 +1,7 @@
-import { formatMeetingRange } from "@/lib/report-format";
+import {
+  formatMeetingRange,
+  formatSessionNo,
+} from "@/lib/report-format";
 import type { ReportInput } from "@/lib/types/report";
 
 const font =
@@ -109,6 +112,7 @@ export function reportToHtml(report: ReportInput) {
     rowInline("팀명", textOrDash(report.team_name)),
     rowInline("작성자", textOrDash(report.author)),
     rowInline("보고 월", formatYearMonth(report.report_month)),
+    rowInline("회차", formatSessionNo(report.session_no) || "-"),
     rowInline("참석 인원", attendees),
     `</ul>`,
     `<h2 style="${styles.h2}">2. 활동일지</h2>`,

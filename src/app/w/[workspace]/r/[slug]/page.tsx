@@ -17,7 +17,7 @@ async function ReportContent({
   if (!workspaceResult.ok) {
     return (
       <main className="missing-page">
-        <p className="brand-mark">REPORTING</p>
+        <p className="brand-mark">INNOSIGHT</p>
         <h1>워크스페이스를 찾을 수 없습니다</h1>
       </main>
     );
@@ -30,7 +30,7 @@ async function ReportContent({
     return (
       <WorkspaceThemeShell theme={workspace.theme}>
         <main className="missing-page">
-          <p className="brand-mark">{workspace.name}</p>
+          <p className="brand-mark">INNOSIGHT</p>
           <h1>보고서를 찾을 수 없습니다</h1>
           <p className="lede">{result.error}</p>
           <Link
@@ -64,7 +64,7 @@ export default function ReportPage(
     <Suspense
       fallback={
         <main className="missing-page">
-          <p className="brand-mark">REPORTING</p>
+          <p className="brand-mark">INNOSIGHT</p>
           <h1>활동보고서 불러오는 중…</h1>
         </main>
       }

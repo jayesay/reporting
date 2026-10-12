@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReportListItem } from "@/app/actions/reports";
 import { formatSeoulDateTime } from "@/lib/format-datetime";
+import { formatSessionListSummary } from "@/lib/report-format";
 import { workspaceReportPath } from "@/lib/paths";
 
 type ReportListProps = {
@@ -35,7 +36,7 @@ export function ReportList({ workspaceSlug, reports }: ReportListProps) {
         <thead>
           <tr>
             <th>보고 월</th>
-            <th>팀명</th>
+            <th>회차·날짜</th>
             <th>작성자</th>
             <th>활동 주제</th>
             <th>상태</th>
@@ -45,13 +46,18 @@ export function ReportList({ workspaceSlug, reports }: ReportListProps) {
         <tbody>
           {reports.map((report) => {
             const href = workspaceReportPath(workspaceSlug, report.slug);
+            const sessionSummary = formatSessionListSummary(
+              report.session_no,
+              report.meeting_start,
+              report.meeting_end,
+            );
             return (
               <tr key={report.slug}>
                 <td>
                   <Link href={href}>{formatMonth(report.report_month)}</Link>
                 </td>
-                <td>
-                  <Link href={href}>{cell(report.team_name)}</Link>
+                <td className="session-cell">
+                  <Link href={href}>{sessionSummary}</Link>
                 </td>
                 <td>
                   <Link href={href}>{cell(report.author)}</Link>

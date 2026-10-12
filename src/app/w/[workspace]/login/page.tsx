@@ -19,7 +19,7 @@ async function LoginContent({
     return (
       <main className="login-page">
         <div className="login-card">
-          <p className="brand-mark">REPORTING</p>
+          <p className="brand-mark">INNOSIGHT</p>
           <h1>워크스페이스 없음</h1>
           <p className="lede tight">{workspaceResult.error}</p>
         </div>
@@ -40,7 +40,7 @@ async function LoginContent({
     <WorkspaceThemeShell theme={workspace.theme}>
       <main className="login-page">
         <div className="login-card">
-          <p className="brand-mark">{workspace.name}</p>
+          <p className="brand-mark">INNOSIGHT</p>
           <h1>활동보고서</h1>
           <p className="lede tight">워크스페이스 비밀번호를 입력해 주세요.</p>
           <LoginForm workspaceSlug={workspace.slug} nextPath={nextPath} />
@@ -58,7 +58,7 @@ export default function WorkspaceLoginPage(
       fallback={
         <main className="login-page">
           <div className="login-card">
-            <p className="brand-mark">REPORTING</p>
+            <p className="brand-mark">INNOSIGHT</p>
             <h1>활동보고서</h1>
           </div>
         </main>

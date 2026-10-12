@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { compressImageForLocalStorage } from "@/lib/compress-image";
 import {
   formatDate,
   formatMeetingRange,
+  formatSessionNo,
   formatYearMonth,
   multilineLines,
   textOrDash,
@@ -31,21 +33,6 @@ type ReportViewProps = {
 
 function photoStorageKey(slug: string) {
   return `innosight-view-photos:${slug}`;
-}
-
-function readFileAsDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        resolve(reader.result);
-        return;
-      }
-      reject(new Error("파일을 읽지 못했습니다."));
-    };
-    reader.onerror = () => reject(new Error("파일을 읽지 못했습니다."));
-    reader.readAsDataURL(file);
-  });
 }
 
 export function ReportView({
@@ -99,7 +86,7 @@ export function ReportView({
       const next: LocalPhoto[] = [];
       for (const file of Array.from(files)) {
         if (!file.type.startsWith("image/")) continue;
-        const dataUrl = await readFileAsDataUrl(file);
+        const dataUrl = await compressImageForLocalStorage(file);
         next.push({
           id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
           name: file.name,
@@ -157,6 +144,10 @@ export function ReportView({
             </li>
             <li>
               <strong>보고 월</strong>: {titleMonth}
+            </li>
+            <li>
+              <strong>회차</strong>:{" "}
+              {formatSessionNo(report.session_no) || "-"}
             </li>
             <li>
               <strong>참석 인원</strong>: {attendees}
@@ -231,7 +222,8 @@ export function ReportView({
               <br />
               <span>위에서 사진을 선택하세요</span>
               <p className="photo-help">
-                이 브라우저에만 로컬 저장됩니다. 서버에는 올라가지 않습니다.
+                이 브라우저에만 로컬 저장됩니다. 추가 시 자동으로 용량을
+                줄입니다.
               </p>
             </div>
           ) : (

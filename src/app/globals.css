@@ -318,7 +318,7 @@ a {
 
 .report-table {
   width: 100%;
-  min-width: 760px;
+  min-width: 820px;
   border-collapse: collapse;
   table-layout: fixed;
 }
@@ -362,22 +362,22 @@ a {
 
 .report-table th:nth-child(1),
 .report-table td:nth-child(1) {
-  width: 12%;
+  width: 10%;
 }
 
 .report-table th:nth-child(2),
 .report-table td:nth-child(2) {
-  width: 16%;
+  width: 22%;
 }
 
 .report-table th:nth-child(3),
 .report-table td:nth-child(3) {
-  width: 12%;
+  width: 10%;
 }
 
 .report-table th:nth-child(4),
 .report-table td:nth-child(4) {
-  width: 28%;
+  width: 26%;
 }
 
 .report-table th:nth-child(5),
@@ -388,6 +388,10 @@ a {
 .report-table th:nth-child(6),
 .report-table td:nth-child(6) {
   width: 20%;
+}
+
+.report-table .session-cell a {
+  white-space: nowrap;
 }
 
 .report-table .topic-cell a {

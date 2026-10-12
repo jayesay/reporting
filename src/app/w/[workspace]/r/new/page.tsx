@@ -15,7 +15,7 @@ async function NewReportContent({
   if (!workspaceResult.ok) {
     return (
       <main className="missing-page">
-        <p className="brand-mark">REPORTING</p>
+        <p className="brand-mark">INNOSIGHT</p>
         <h1>워크스페이스를 찾을 수 없습니다</h1>
       </main>
     );
@@ -44,7 +44,7 @@ export default function NewReportPage(
     <Suspense
       fallback={
         <main className="missing-page">
-          <p className="brand-mark">REPORTING</p>
+          <p className="brand-mark">INNOSIGHT</p>
           <h1>새 보고서 준비 중…</h1>
         </main>
       }

@@ -3,6 +3,7 @@
 import { customAlphabet } from "nanoid";
 import {
   createEmptyReportInput,
+  normalizeSessionNo,
   type AiServiceEntry,
   type Report,
   type ReportInput,
@@ -32,6 +33,7 @@ function normalizeReport(row: DbReport): Report {
     team_name: row.team_name,
     author: row.author,
     report_month: row.report_month,
+    session_no: normalizeSessionNo(row.session_no),
     attendees: row.attendees ?? [],
     meeting_start: row.meeting_start,
     meeting_end: row.meeting_end,
@@ -58,6 +60,7 @@ function toPayload(input: ReportInput, teamName: string) {
     team_name: teamName,
     author: input.author,
     report_month: input.report_month,
+    session_no: normalizeSessionNo(input.session_no),
     attendees: input.attendees.filter((name) => name.trim().length > 0),
     meeting_start: input.meeting_start,
     meeting_end: input.meeting_end,
@@ -82,6 +85,9 @@ export type ReportListItem = {
   author: string;
   report_month: string;
   topic: string;
+  session_no: number | null;
+  meeting_start: string;
+  meeting_end: string;
   updated_at: string;
 };
 
@@ -147,7 +153,9 @@ export async function listReports(
     const supabase = createSupabaseServerClient();
     const { data, error } = await supabase
       .from("reports")
-      .select("slug, status, team_name, author, report_month, topic, updated_at")
+      .select(
+        "slug, status, team_name, author, report_month, topic, session_no, meeting_start, meeting_end, updated_at",
+      )
       .eq("workspace_id", workspaceResult.workspace.id)
       .order("updated_at", { ascending: false });
 
@@ -155,7 +163,20 @@ export async function listReports(
       return { ok: false, error: error.message };
     }
 
-    return { ok: true, reports: (data ?? []) as ReportListItem[] };
+    const reports: ReportListItem[] = (data ?? []).map((row) => ({
+      slug: row.slug as string,
+      status: row.status as Report["status"],
+      team_name: String(row.team_name ?? ""),
+      author: String(row.author ?? ""),
+      report_month: String(row.report_month ?? ""),
+      topic: String(row.topic ?? ""),
+      session_no: normalizeSessionNo(row.session_no),
+      meeting_start: String(row.meeting_start ?? ""),
+      meeting_end: String(row.meeting_end ?? ""),
+      updated_at: row.updated_at as string,
+    }));
+
+    return { ok: true, reports };
   } catch (error) {
     return {
       ok: false,

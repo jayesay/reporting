@@ -24,6 +24,7 @@ create table if not exists public.reports (
   team_name text not null default '',
   author text not null default '',
   report_month text not null default '',
+  session_no integer check (session_no is null or session_no > 0),
   attendees text[] not null default '{}',
 
   meeting_start text not null default '',

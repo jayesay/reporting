@@ -16,6 +16,7 @@ export type Report = {
   team_name: string;
   author: string;
   report_month: string;
+  session_no: number | null;
   attendees: string[];
   meeting_start: string;
   meeting_end: string;
@@ -52,12 +53,24 @@ export function createEmptyAiService(): AiServiceEntry {
   };
 }
 
+export function normalizeSessionNo(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+    return Math.floor(value);
+  }
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed) && parsed > 0) return Math.floor(parsed);
+  }
+  return null;
+}
+
 export function createEmptyReportInput(): ReportInput {
   return {
     status: "draft",
     team_name: "",
     author: "",
     report_month: "",
+    session_no: null,
     attendees: [],
     meeting_start: "",
     meeting_end: "",

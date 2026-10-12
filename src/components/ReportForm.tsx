@@ -22,6 +22,7 @@ import {
 import {
   createEmptyAiService,
   createEmptyReportInput,
+  normalizeSessionNo,
   type Report,
   type ReportInput,
 } from "@/lib/types/report";
@@ -75,6 +76,7 @@ function toInput(
     team_name: workspaceName,
     author: report.author,
     report_month: report.report_month,
+    session_no: normalizeSessionNo(report.session_no),
     attendees: report.attendees,
     meeting_start: report.meeting_start,
     meeting_end: report.meeting_end,
@@ -266,7 +268,7 @@ export function ReportForm({
       </Link>
       <header className="report-top">
         <div>
-          <p className="brand-mark">{workspaceName}</p>
+          <p className="brand-mark">INNOSIGHT</p>
           <h1>활동보고서</h1>
         </div>
         <div className="report-actions">
@@ -339,7 +341,7 @@ export function ReportForm({
       >
         <section className="section">
           <h2>1. 팀정보</h2>
-          <div className="grid-3">
+          <div className="grid-2">
             <div className="field">
               <label htmlFor="team_name">팀명</label>
               <p id="team_name" className="readonly-chip">
@@ -355,6 +357,8 @@ export function ReportForm({
                 onChange={(e) => patch("author", e.target.value)}
               />
             </div>
+          </div>
+          <div className="grid-2">
             <div className="field">
               <label htmlFor="report_month">보고 월</label>
               <input
@@ -362,6 +366,21 @@ export function ReportForm({
                 type="month"
                 value={form.report_month}
                 onChange={(e) => patch("report_month", e.target.value)}
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="session_no">회차</label>
+              <input
+                id="session_no"
+                type="number"
+                min={1}
+                step={1}
+                inputMode="numeric"
+                placeholder="예: 1"
+                value={form.session_no ?? ""}
+                onChange={(e) =>
+                  patch("session_no", normalizeSessionNo(e.target.value))
+                }
               />
             </div>
           </div>

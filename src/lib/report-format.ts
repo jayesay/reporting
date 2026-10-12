@@ -77,6 +77,34 @@ export function joinMeetingDateTime(date: string, time: string) {
   return `${d}T${t}`;
 }
 
+/** 목록용: 10.12 */
+export function formatShortDate(value: string) {
+  const trimmed = value.trim();
+  const match = trimmed.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return "";
+  return `${match[2]}.${match[3]}`;
+}
+
+export function formatSessionNo(value: number | null | undefined) {
+  if (value == null || !Number.isFinite(value) || value <= 0) return "";
+  return `${Math.floor(value)}회`;
+}
+
+/** 목록용: 1회 10.12 */
+export function formatSessionListSummary(
+  sessionNo: number | null | undefined,
+  meetingStart: string,
+  meetingEnd = "",
+) {
+  const session = formatSessionNo(sessionNo);
+  const date =
+    formatShortDate(meetingStart) || formatShortDate(meetingEnd);
+  if (session && date) return `${session} ${date}`;
+  if (session) return session;
+  if (date) return date;
+  return "-";
+}
+
 export function textOrDash(value: string) {
   const trimmed = value.trim();
   return trimmed || "-";
