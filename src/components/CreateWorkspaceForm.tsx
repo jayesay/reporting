@@ -1,33 +1,47 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
-import { createWorkspace } from "@/app/actions/admin";
+import { useState, useTransition, type FormEvent } from "react";
+import { postAdminApi } from "@/lib/admin-api";
 import {
   DEFAULT_WORKSPACE_THEME,
   WORKSPACE_THEMES,
 } from "@/lib/workspace-theme";
 
 export function CreateWorkspaceForm() {
-  const [state, formAction, pending] = useActionState(createWorkspace, {
-    error: null,
-    createdSlug: null,
-  });
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [theme, setTheme] = useState(DEFAULT_WORKSPACE_THEME);
 
-  useEffect(() => {
-    if (!state.createdSlug) return;
-    setNotice(
-      `워크스페이스가 만들어졌습니다. 팀 링크: /w/${state.createdSlug}`,
-    );
-    // soft refresh는 /admin에서 500을 유발할 수 있어 전체 새로고침
-    window.setTimeout(() => {
-      window.location.assign("/admin");
-    }, 400);
-  }, [state.createdSlug]);
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    setError(null);
+    setNotice(null);
+
+    startTransition(async () => {
+      const result = await postAdminApi<{ slug: string }>(
+        "/admin/api/workspaces",
+        {
+          slug: formData.get("slug"),
+          name: formData.get("name"),
+          password: formData.get("password"),
+          theme: formData.get("theme"),
+        },
+      );
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+      setNotice(`워크스페이스가 만들어졌습니다. 팀 링크: /w/${result.slug}`);
+      window.setTimeout(() => {
+        window.location.reload();
+      }, 600);
+    });
+  }
 
   return (
-    <form className="admin-create-form" action={formAction}>
+    <form className="admin-create-form" onSubmit={handleSubmit}>
       <h2>워크스페이스 추가</h2>
       <div className="grid-3">
         <div className="field">
@@ -88,7 +102,7 @@ export function CreateWorkspaceForm() {
         팀에게 <code>/w/slug</code> 주소와 비밀번호를 전달하세요. 보고서 팀명은
         이 이름과 동일하게 고정됩니다.
       </p>
-      {state.error ? <p className="error-text">{state.error}</p> : null}
+      {error ? <p className="error-text">{error}</p> : null}
       {notice ? <p className="success-text">{notice}</p> : null}
       <button type="submit" className="btn primary" disabled={pending}>
         {pending ? "만드는 중…" : "발급하기"}

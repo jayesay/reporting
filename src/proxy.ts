@@ -42,11 +42,20 @@ function clearAdminCookie(response: NextResponse) {
   return response;
 }
 
+/**
+ * 관리자 화면에서 보낸 링크 prefetch(fetch 요청)도 이 proxy를 거친다.
+ * 그때 쿠키를 지우면 관리자 화면의 다음 요청이 로그인으로 튕기므로,
+ * 브라우저가 실제로 다른 페이지 문서를 열 때만 지운다.
+ */
+function isDocumentNavigation(request: NextRequest) {
+  return request.headers.get("sec-fetch-dest") === "document";
+}
+
 function withAdminCleared(
   request: NextRequest,
   response: NextResponse,
 ) {
-  if (request.cookies.get(ADMIN_COOKIE)?.value) {
+  if (request.cookies.get(ADMIN_COOKIE)?.value && isDocumentNavigation(request)) {
     return clearAdminCookie(response);
   }
   return response;

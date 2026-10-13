@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Suspense, type ReactNode } from "react";
 import { adminListWorkspaces, requireAdmin } from "@/app/actions/admin";
 import { CreateWorkspaceForm } from "@/components/CreateWorkspaceForm";
@@ -45,9 +44,9 @@ async function AdminWorkspaceList() {
                     />
                   </td>
                   <td>
-                    <Link href={workspaceHomePath(workspace.slug)}>
+                    <a href={workspaceHomePath(workspace.slug)}>
                       /w/{workspace.slug}
-                    </Link>
+                    </a>
                   </td>
                 </tr>
               ))}
@@ -76,9 +75,11 @@ export default function AdminPage() {
               <p className="brand-mark">ADMIN</p>
               <h1>워크스페이스 관리</h1>
             </div>
-            <Link href="/" className="btn ghost">
+            {/* 관리자 영역을 벗어날 때는 전체 페이지 이동이어야 proxy가 관리자 쿠키를 지운다 */}
+            {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+            <a href="/" className="btn ghost">
               사이트 홈
-            </Link>
+            </a>
           </header>
 
           <section className="section admin-create-section">

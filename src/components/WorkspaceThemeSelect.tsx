@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { updateWorkspaceTheme } from "@/app/actions/admin";
+import { useState, useTransition } from "react";
+import { postAdminApi } from "@/lib/admin-api";
 import {
   WORKSPACE_THEMES,
   type WorkspaceThemeId,
@@ -20,10 +20,6 @@ export function WorkspaceThemeSelect({
   const [value, setValue] = useState(theme);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setValue(theme);
-  }, [theme]);
-
   return (
     <div className="theme-inline-wrap">
       <select
@@ -37,12 +33,14 @@ export function WorkspaceThemeSelect({
           setValue(next);
           setError(null);
           startTransition(async () => {
-            const result = await updateWorkspaceTheme(workspaceId, next);
+            const result = await postAdminApi("/admin/api/workspaces/theme", {
+              workspaceId,
+              theme: next,
+            });
             if (!result.ok) {
               setValue(previous);
               setError(result.error);
             }
-            // router.refresh()는 cacheComponents 환경에서 /admin 재렌더 500을 유발함
           });
         }}
       >
