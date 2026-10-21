@@ -3,6 +3,7 @@
 import { customAlphabet } from "nanoid";
 import {
   createEmptyReportInput,
+  normalizeAiServices,
   normalizeJournals,
   normalizeNextPlans,
   type AiServiceEntry,
@@ -97,7 +98,7 @@ function normalizeReport(row: DbReport): Report {
     achievements: row.achievements,
     learnings: row.learnings,
     difficulties: row.difficulties,
-    ai_services: row.ai_services ?? [],
+    ai_services: normalizeAiServices(row.ai_services),
     next_plans: normalizeNextPlans(row.next_plans, row),
     created_at: row.created_at,
     updated_at: row.updated_at,
@@ -128,7 +129,7 @@ function toPayload(input: ReportInput, teamName: string) {
     achievements: input.achievements,
     learnings: input.learnings,
     difficulties: input.difficulties,
-    ai_services: input.ai_services,
+    ai_services: normalizeAiServices(input.ai_services),
     next_plans: nextPlans,
     next_meeting_date: firstPlan?.meeting_date ?? "",
     next_topic: firstPlan?.topic ?? "",
@@ -239,7 +240,10 @@ export async function listReports(
       team_name: String(row.team_name ?? ""),
       author: String(row.author ?? ""),
       report_month: String(row.report_month ?? ""),
-      journals: journalsOf(row),
+      journals: journalsOf(row).map((item) => ({
+        ...item,
+        deliverable_images: [],
+      })),
       updated_at: row.updated_at as string,
     }));
 

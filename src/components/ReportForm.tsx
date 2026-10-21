@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
+import { compressImageForLocalStorage } from "@/lib/compress-image";
 import {
   createReport,
   deleteReport,
@@ -25,11 +26,16 @@ import {
   createEmptyJournal,
   createEmptyNextPlan,
   createEmptyReportInput,
+  deliverableImagesBytes,
+  formatByteSize,
+  MAX_DELIVERABLE_IMAGE_BYTES,
   MAX_JOURNAL_COUNT,
   MAX_NEXT_PLAN_COUNT,
+  normalizeAiServices,
   normalizeJournals,
   normalizeNextPlans,
   normalizeSessionNo,
+  type DeliverableImage,
   type JournalEntry,
   type NextPlanEntry,
   type Report,
@@ -46,6 +52,11 @@ type ReportFormProps = {
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
+const TIME_HOURS = Array.from({ length: 24 }, (_, hour) =>
+  String(hour).padStart(2, "0"),
+);
+const TIME_MINUTES = ["00", "10", "20", "30", "40", "50"] as const;
+
 /** time 값을 10분 단위로 맞춤 (HH:mm) */
 function snapTimeToTenMinutes(value: string) {
   const match = value.match(/^(\d{2}):(\d{2})/);
@@ -58,11 +69,190 @@ function snapTimeToTenMinutes(value: string) {
   let snapped = Math.round(minutes / 10) * 10;
   let nextHour = hour;
   if (snapped === 60) {
-    snapped = 0;
-    nextHour = Math.min(23, hour + 1);
+    snapped = 50;
+    nextHour = hour;
   }
 
   return `${String(nextHour).padStart(2, "0")}:${String(snapped).padStart(2, "0")}`;
+}
+
+function splitTimeParts(value: string) {
+  const snapped = snapTimeToTenMinutes(value);
+  const match = snapped.match(/^(\d{2}):(\d{2})$/);
+  if (!match) return { hour: "", minute: "" };
+  return { hour: match[1], minute: match[2] };
+}
+
+function MeetingTimeSelect({
+  value,
+  ariaLabel,
+  onChange,
+}: {
+  value: string;
+  ariaLabel: string;
+  onChange: (next: string) => void;
+}) {
+  const { hour, minute } = splitTimeParts(value);
+
+  return (
+    <div className="meeting-time-select">
+      <select
+        aria-label={`${ariaLabel} 시`}
+        value={hour}
+        onChange={(event) => {
+          const nextHour = event.target.value;
+          if (!nextHour) {
+            onChange("");
+            return;
+          }
+          onChange(`${nextHour}:${minute || "00"}`);
+        }}
+      >
+        <option value="">시</option>
+        {TIME_HOURS.map((item) => (
+          <option key={item} value={item}>
+            {item}
+          </option>
+        ))}
+      </select>
+      <span className="meeting-time-colon" aria-hidden>
+        :
+      </span>
+      <select
+        aria-label={`${ariaLabel} 분`}
+        value={minute}
+        onChange={(event) => {
+          const nextMinute = event.target.value;
+          if (!nextMinute && !hour) {
+            onChange("");
+            return;
+          }
+          onChange(`${hour || "00"}:${nextMinute || "00"}`);
+        }}
+      >
+        <option value="">분</option>
+        {TIME_MINUTES.map((item) => (
+          <option key={item} value={item}>
+            {item}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function DeliverableImagesField({
+  images,
+  onChange,
+}: {
+  images: DeliverableImage[];
+  onChange: (next: DeliverableImage[]) => void;
+}) {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [imageError, setImageError] = useState<string | null>(null);
+  const usedBytes = deliverableImagesBytes(images);
+  const remainingBytes = Math.max(0, MAX_DELIVERABLE_IMAGE_BYTES - usedBytes);
+  const usedLabel = usedBytes === 0 ? "0MB" : formatByteSize(usedBytes);
+  const limitLabel = formatByteSize(MAX_DELIVERABLE_IMAGE_BYTES);
+
+  async function addImages(files: FileList | null) {
+    if (!files || files.length === 0) return;
+    if (remainingBytes <= 0) {
+      setImageError(
+        `이 항목 이미지는 업로드 용량 합쳐서 ${limitLabel}까지입니다.`,
+      );
+      if (fileRef.current) fileRef.current.value = "";
+      return;
+    }
+
+    setImageError(null);
+    try {
+      const next = [...images];
+      let skippedForSize = 0;
+
+      for (const file of Array.from(files)) {
+        if (!file.type.startsWith("image/")) continue;
+        if (deliverableImagesBytes(next) + file.size > MAX_DELIVERABLE_IMAGE_BYTES) {
+          skippedForSize += 1;
+          continue;
+        }
+        const dataUrl = await compressImageForLocalStorage(file);
+        next.push({
+          id: `img-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          name: file.name,
+          dataUrl,
+          bytes: file.size,
+        });
+      }
+
+      if (next.length > images.length) onChange(next);
+
+      if (skippedForSize > 0) {
+        const nextUsed = deliverableImagesBytes(next);
+        const nextUsedLabel =
+          nextUsed === 0 ? "0MB" : formatByteSize(nextUsed);
+        setImageError(
+          `업로드 용량이 이 항목 한도(${limitLabel})를 넘습니다. 현재 ${nextUsedLabel} / ${limitLabel}.`,
+        );
+        return;
+      }
+      if (next.length === images.length) {
+        setImageError("이미지 파일만 추가할 수 있습니다.");
+      }
+    } catch (error) {
+      setImageError(
+        error instanceof Error ? error.message : "이미지 추가에 실패했습니다.",
+      );
+    } finally {
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  return (
+    <>
+      <input
+        ref={fileRef}
+        className="deliverable-file"
+        type="file"
+        accept="image/*"
+        multiple
+        onChange={(event) => {
+          void addImages(event.target.files);
+        }}
+      />
+      {images.length > 0 ? (
+        <ul className="deliverable-thumbs">
+          {images.map((image) => (
+            <li key={image.id} className="deliverable-thumb">
+              <img src={image.dataUrl} alt={image.name || "결과물 이미지"} />
+              <button
+                type="button"
+                className="deliverable-thumb-remove"
+                onClick={() =>
+                  onChange(images.filter((row) => row.id !== image.id))
+                }
+              >
+                삭제
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      <button
+        type="button"
+        className="btn ghost compact"
+        onClick={() => fileRef.current?.click()}
+        disabled={remainingBytes <= 0}
+      >
+        이미지 추가
+      </button>
+      <p className="hint">
+        글과 화면 캡처를 함께 넣을 수 있습니다. 이 항목 업로드 용량은 합쳐서{" "}
+        {limitLabel}까지입니다. 현재 {usedLabel} / {limitLabel}
+      </p>
+      {imageError ? <p className="error-text">{imageError}</p> : null}
+    </>
+  );
 }
 
 function JournalCard({
@@ -126,30 +316,18 @@ function JournalCard({
             value={date}
             onChange={(e) => updateMeeting(e.target.value, startTime, endTime)}
           />
-          <input
-            type="time"
-            step={600}
-            aria-label="시작 시간"
+          <MeetingTimeSelect
             value={startTime}
-            onChange={(e) =>
-              updateMeeting(date, snapTimeToTenMinutes(e.target.value), endTime)
-            }
+            ariaLabel="시작 시간"
+            onChange={(nextStart) => updateMeeting(date, nextStart, endTime)}
           />
           <span className="meeting-datetime-sep" aria-hidden>
             ~
           </span>
-          <input
-            type="time"
-            step={600}
-            aria-label="종료 시간"
+          <MeetingTimeSelect
             value={endTime}
-            onChange={(e) =>
-              updateMeeting(
-                date,
-                startTime,
-                snapTimeToTenMinutes(e.target.value),
-              )
-            }
+            ariaLabel="종료 시간"
+            onChange={(nextEnd) => updateMeeting(date, startTime, nextEnd)}
           />
           </div>
         </div>
@@ -195,6 +373,12 @@ function JournalCard({
             onChange({ ...item, deliverables: e.target.value })
           }
         />
+        <DeliverableImagesField
+          images={item.deliverable_images ?? []}
+          onChange={(deliverable_images) =>
+            onChange({ ...item, deliverable_images })
+          }
+        />
       </div>
       <div className="field">
         <label>사진</label>
@@ -232,10 +416,7 @@ function toInput(
     achievements: report.achievements,
     learnings: report.learnings,
     difficulties: report.difficulties,
-    ai_services:
-      report.ai_services.length > 0
-        ? report.ai_services
-        : [createEmptyAiService()],
+    ai_services: normalizeAiServices(report.ai_services),
     next_plans: normalizeNextPlans(report.next_plans),
   };
 }
@@ -654,6 +835,17 @@ export function ReportForm({
                           row.id === item.id
                             ? { ...row, usage: e.target.value }
                             : row,
+                        ),
+                      )
+                    }
+                  />
+                  <DeliverableImagesField
+                    images={item.usage_images ?? []}
+                    onChange={(usage_images) =>
+                      patch(
+                        "ai_services",
+                        form.ai_services.map((row) =>
+                          row.id === item.id ? { ...row, usage_images } : row,
                         ),
                       )
                     }

@@ -665,14 +665,14 @@ a {
 
 .meeting-datetime-row {
   display: flex;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.4rem;
   min-width: 0;
 }
 
-.meeting-datetime-row input {
-  flex: 1 1 0;
+.meeting-datetime-row input,
+.meeting-time-select select {
   min-width: 0;
   width: auto;
   box-sizing: border-box;
@@ -684,23 +684,33 @@ a {
   font-size: 0.85rem;
   height: 2.2rem;
   min-height: 2.2rem;
-  padding: 0 0.4rem;
+  padding: 0 0.35rem;
   outline: none;
 }
 
 .meeting-datetime-row input[type="date"] {
-  flex: 1.15 1 0;
+  flex: 1 1 8.5rem;
 }
 
-.meeting-datetime-row input[type="time"] {
-  flex: 0.9 1 0;
+.meeting-time-select {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  flex: 1 1 7.25rem;
+  min-width: 7.25rem;
 }
 
-.meeting-datetime-row input:focus {
+.meeting-time-select select {
+  flex: 1 1 0;
+}
+
+.meeting-datetime-row input:focus,
+.meeting-time-select select:focus {
   border-color: color-mix(in srgb, var(--teal) 55%, transparent);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--teal) 12%, transparent);
 }
 
+.meeting-time-colon,
 .meeting-datetime-sep {
   flex: 0 0 auto;
   color: var(--ink-soft);
@@ -762,10 +772,19 @@ a {
 
 .field input[type="month"],
 .field input[type="date"],
+.field input[type="time"],
 .field input[type="datetime-local"] {
   height: 2.2rem;
   min-height: 2.2rem;
   padding: 0 0.55rem;
+  line-height: normal;
+}
+
+.field .meeting-datetime-row input {
+  width: auto;
+  min-width: 0;
+  padding: 0 0.35rem;
+  font-size: 0.85rem;
   line-height: normal;
 }
 
@@ -811,6 +830,51 @@ a {
 
 .photo-placeholder p + p {
   margin-top: 0.25rem;
+}
+
+.field input.deliverable-file {
+  display: none;
+}
+
+.field > .btn {
+  justify-self: start;
+  width: auto;
+}
+
+.deliverable-thumbs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.deliverable-thumb {
+  position: relative;
+  margin: 0;
+}
+
+.deliverable-thumb img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 0.6rem;
+  background: #fff;
+}
+
+.deliverable-thumb-remove {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  padding: 0.28rem 0.55rem;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(18, 38, 43, 0.78);
+  color: #fff;
+  font-size: 0.75rem;
+  cursor: pointer;
 }
 
 

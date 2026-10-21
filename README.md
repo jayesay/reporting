@@ -1,36 +1,120 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# INNOSIGHT 활동보고서
 
-## Getting Started
+팀 단위로 **월간 활동보고서**를 쓰고, 조회하고, 게시판에 붙여 넣을 수 있는 웹 앱입니다. 팀마다 워크스페이스 주소와 비밀번호를 나눠 쓰고, 계정 가입 없이 같은 공간에서 보고서를 관리합니다.
 
-First, run the development server:
+## 한 줄 요약
+
+- 팀 링크: `/w/{팀슬러그}` + 공유 비밀번호
+- 월간 보고서: 활동일지, 결과물(글·이미지), AI 사용 현황, 다음 모임 계획
+- 지원금 지출 내역을 워크스페이스별로 따로 기록
+- 조회 화면 HTML을 복사해 게시판에 붙여넣기
+
+## 이런 팀에 맞습니다
+
+- 매월 활동보고서 양식이 정해져 있는 스터디·프로젝트 팀
+- 팀원 전원이 같은 문서를 이어 쓰고 싶은 경우
+- 결과물 캡처와 AI 활용 사례를 보고서에 같이 남기고 싶은 경우
+
+## 주요 기능
+
+### 워크스페이스
+
+- 관리자가 `/admin`에서 팀 이름, URL slug, 비밀번호, 화면 톤을 발급합니다.
+- 팀은 `/w/innosight`처럼 주소와 비밀번호만 받으면 됩니다.
+- 워크스페이스마다 테마(틸 그린, 오션 블루, 포레스트, 슬레이트, 앰버)를 고를 수 있습니다.
+- 로그인은 워크스페이스별로 분리됩니다. 한 팀 쿠키로 다른 팀 공간에 들어가지 않습니다.
+
+### 월간 활동보고서
+
+목록에서 보고 월, 작성자, 활동 주제, 상태(임시저장 / 작성 완료), 최근 수정 시각을 봅니다.
+
+보고서 구성은 다음과 같습니다.
+
+1. **기본 정보** — 작성자, 보고 월, 팀원
+2. **활동일지** — 최대 2회. 회차, 모임일시(10분 단위), 장소, 활동 주제, 참석자, 스터디 내용, 결과물
+3. **이달 결과와 이슈** — 달성한 것, 배운 점, 어려웠던 점
+4. **AI 서비스 사용 현황** — 사용자, 사용 중인 AI, 활용사례/결과물, 스터디와의 연관성
+5. **다음 모임 계획** — 최대 2건. 예정일, 다음 주제, 목표
+
+참석자는 보고서 팀원과 활동일지 참석자를 따로 둘 수 있습니다. 해당 회차에 온 사람만 남기거나 추가하면 됩니다.
+
+저장 상태는 임시저장 / 작성 완료로 두고, 비밀 링크를 복사해 팀원에게 전달할 수 있습니다.
+
+### 결과물 이미지
+
+활동일지 **결과물**과 AI 사용 현황의 **활용사례/결과물**에 글과 이미지를 같이 넣을 수 있습니다.
+
+- 항목당 업로드 합계 **10MB** (파일 선택 용량 기준)
+- 장수 제한 없음
+- 저장할 때 긴 변 1280px JPEG로 줄여 보고서에 함께 저장
+- 같은 워크스페이스 팀원이 조회하면 이미지도 같이 보입니다
+
+이미지는 별도 파일 저장소가 아니라 보고서 JSON(`journals`, `ai_services`) 안에 들어갑니다.
+
+### 조회 화면 사진
+
+조회 페이지의 **사진**은 결과물 이미지와 다릅니다. 회차별로 클릭해서 넣을 수 있고, 그 브라우저 `localStorage`에만 남습니다. 팀원 간에 공유되지 않습니다.
+
+### 조회 · HTML 복사
+
+조회 화면은 게시판에 올리기 좋은 문서 형태로 보입니다. 빈 항목은 숨기고, 스터디 내용처럼 긴 글은 제목만 말머리(불릿)를 붙입니다. HTML을 복사하면 DEXT5 같은 에디터에 붙여 넣을 수 있습니다.
+
+### 지원금 지출 내역
+
+워크스페이스마다 `/w/{slug}/expenses`에서 날짜, 금액, 내용을 기록합니다. 월별로 모아 보고 합계를 봅니다. 활동보고서와는 별도 테이블입니다.
+
+## 화면 주소
+
+| 구분 | 주소 |
+| --- | --- |
+| 랜딩 | `/` |
+| 관리자 | `/admin` |
+| 팀 공간 | `/w/{slug}` |
+| 팀 로그인 | `/w/{slug}/login` |
+| 새 보고서 | `/w/{slug}/r/new` |
+| 보고서 작성 | `/w/{slug}/r/{id}` |
+| 보고서 조회 | `/w/{slug}/r/{id}/view` |
+| 지원금 내역 | `/w/{slug}/expenses` |
+
+## 기술 구성
+
+- Next.js App Router, React, TypeScript
+- Tailwind CSS
+- Supabase (Postgres). 앱은 anon/publishable 키로 접속합니다.
+- 인증은 워크스페이스·관리자 쿠키입니다. 사용자 계정은 없습니다.
+
+## 시작하기
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+[http://localhost:3000](http://localhost:3000)에서 확인합니다.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+`.env.local` 예시:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+ADMIN_PASSWORD=
+```
 
-## Learn More
+`ADMIN_PASSWORD`가 관리자 페이지 비밀번호입니다.
 
-To learn more about Next.js, take a look at the following resources:
+### 데이터베이스
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+새 프로젝트는 `supabase/schema.sql`을 실행하면 됩니다. 이미 운영 중인 DB에는 아래를 순서대로 반영합니다.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- `supabase/add_workspaces.sql`
+- `supabase/add_workspace_theme.sql`
+- `supabase/add_journals_and_next_plans.sql`
+- `supabase/add_grant_expenses.sql`
 
-## Deploy on Vercel
+활동일지·다음 모임 계획 컬럼이 없으면 보고서 저장 시 SQL 실행 안내가 나옵니다.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 운영 메모
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Supabase Free 티어는 파일 Storage 버킷을 쓰지 않습니다. 결과물 이미지는 보고서 행 용량을 씁니다.
+- 목록 화면에서는 이미지 데이터를 빼고, 작성·조회할 때만 불러옵니다.
+- 이미지 한도는 압축 후 용량이 아니라 **업로드한 파일 크기**입니다. 실제 저장 크기는 파일마다 다릅니다.

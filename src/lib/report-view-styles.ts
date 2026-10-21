@@ -129,7 +129,7 @@ export const REPORT_VIEW_CSS = `
   border-radius: 0;
 }
 .view-html-root .info-stacked {
-  display: block;
+  display: list-item;
 }
 .view-html-root .info-stacked-body {
   margin-top: 4px;
@@ -146,6 +146,41 @@ export const REPORT_VIEW_CSS = `
 }
 .view-html-root .ai-card .text-block .block {
   margin-bottom: 0;
+}
+.view-html-root .deliverable-block {
+  margin-top: 16px;
+}
+.view-html-root .deliverable-block h3 {
+  margin: 0 0 8px;
+  color: var(--teal-deep);
+}
+.view-html-root .deliverable-text p {
+  margin: 0 0 8px;
+}
+.view-html-root .deliverable-text p:last-child {
+  margin-bottom: 0;
+}
+.view-html-root .ai-card .deliverable-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+}
+.view-html-root .deliverable-grid li {
+  margin: 0;
+  list-style: none;
+}
+.view-html-root .deliverable-grid img {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
 }
 .view-html-root .block p,
 .view-html-root .ai-card p {

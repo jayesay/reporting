@@ -36,45 +36,50 @@ export function formatTime(value: string) {
   return `${match[1]}시 ${match[2]}분`;
 }
 
+function matchMeetingDate(value: string) {
+  return value.trim().match(/^(\d{4}-\d{2}-\d{2})/)?.[1] ?? "";
+}
+
+function matchMeetingTime(value: string) {
+  const trimmed = value.trim();
+  return (
+    trimmed.match(/T(\d{2}:\d{2})/)?.[1] ??
+    trimmed.match(/^(\d{2}:\d{2})$/)?.[1] ??
+    ""
+  );
+}
+
 /** 조회용: 2026년 10월 12일 14시 00분 ~ 16시 00분 */
 export function formatMeetingRange(start: string, end: string) {
-  const startMatch = start
-    .trim()
-    .match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})/);
-  const endMatch = end
-    .trim()
-    .match(/^(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})/);
+  const { date, startTime, endTime } = splitMeetingFields(start, end);
+  const dateText = date ? formatDate(date) : "";
+  const startText = startTime ? formatTime(startTime) : "";
+  const endText = endTime ? formatTime(endTime) : "";
 
-  if (!startMatch && !endMatch) return "-";
-
-  if (startMatch && endMatch) {
-    const [, y, m, d, sh, sm] = startMatch;
-    const [, ey, em, ed, eh, emin] = endMatch;
-    const sameDay = y === ey && m === em && d === ed;
-    if (sameDay) {
-      return `${y}년 ${m}월 ${d}일 ${sh}시 ${sm}분 ~ ${eh}시 ${emin}분`;
-    }
-    return `${formatDateTime(start)} ~ ${formatDateTime(end)}`;
+  if (dateText && startText && endText) {
+    return `${dateText} ${startText} ~ ${endText}`;
   }
-
-  return formatDateTime(startMatch ? start : end);
+  if (dateText && startText) return `${dateText} ${startText}`;
+  if (dateText && endText) return `${dateText} ~ ${endText}`;
+  if (startText && endText) return `${startText} ~ ${endText}`;
+  return dateText || startText || endText || "-";
 }
 
 export function splitMeetingFields(start: string, end: string) {
-  const startMatch = start.trim().match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
-  const endMatch = end.trim().match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/);
   return {
-    date: startMatch?.[1] ?? endMatch?.[1] ?? "",
-    startTime: startMatch?.[2] ?? "",
-    endTime: endMatch?.[2] ?? "",
+    date: matchMeetingDate(start) || matchMeetingDate(end),
+    startTime: matchMeetingTime(start),
+    endTime: matchMeetingTime(end),
   };
 }
 
 export function joinMeetingDateTime(date: string, time: string) {
   const d = date.trim();
   const t = time.trim();
-  if (!d || !t) return "";
-  return `${d}T${t}`;
+  if (d && t) return `${d}T${t}`;
+  if (d) return d;
+  if (t) return `T${t}`;
+  return "";
 }
 
 export function formatSessionNo(value: number | null | undefined) {

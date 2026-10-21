@@ -15,6 +15,7 @@ import {
   journalHasContent,
   nextPlanHasContent,
   type AiServiceEntry,
+  type DeliverableImage,
   type Report,
 } from "@/lib/types/report";
 import {
@@ -41,6 +42,7 @@ type InfoRow = {
   label: string;
   value: string;
   stacked?: boolean;
+  images?: DeliverableImage[];
 };
 
 function photoStorageKey(slug: string) {
@@ -64,8 +66,10 @@ function readPhotoStore(raw: string, fallbackJournalId?: string): PhotosByJourna
 }
 
 function filledAiServices(items: AiServiceEntry[]) {
-  return items.filter((item) =>
-    [item.serviceName, item.users, item.usage, item.relevance].some(hasText),
+  return items.filter(
+    (item) =>
+      [item.serviceName, item.users, item.usage, item.relevance].some(hasText) ||
+      (item.usage_images?.length ?? 0) > 0,
   );
 }
 
@@ -85,24 +89,47 @@ function InfoValue({ value }: { value: string }) {
 }
 
 function InfoList({ rows }: { rows: InfoRow[] }) {
-  const visible = rows.filter((row) => hasText(row.value) && row.value !== "-");
+  const visible = rows.filter(
+    (row) =>
+      (hasText(row.value) && row.value !== "-") ||
+      (row.images?.length ?? 0) > 0,
+  );
   if (visible.length === 0) return null;
   return (
     <ul>
-      {visible.map((row) =>
-        row.stacked ? (
-          <li key={row.label} className="info-stacked">
-            <strong>{row.label}</strong>
-            <div className="info-stacked-body">
-              <InfoValue value={row.value} />
-            </div>
-          </li>
-        ) : (
+      {visible.map((row) => {
+        const images = row.images ?? [];
+        const stacked = row.stacked || images.length > 0;
+        if (stacked) {
+          return (
+            <li key={row.label} className="info-stacked">
+              <strong>{row.label}</strong>
+              {hasText(row.value) ? (
+                <div className="info-stacked-body">
+                  <InfoValue value={row.value} />
+                </div>
+              ) : null}
+              {images.length > 0 ? (
+                <ul className="deliverable-grid">
+                  {images.map((image) => (
+                    <li key={image.id}>
+                      <img
+                        src={image.dataUrl}
+                        alt={image.name || "결과물 이미지"}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+            </li>
+          );
+        }
+        return (
           <li key={row.label}>
             <strong>{row.label}</strong>: <InfoValue value={row.value} />
           </li>
-        ),
-      )}
+        );
+      })}
     </ul>
   );
 }
@@ -299,7 +326,31 @@ export function ReportView({
                       },
                     ]}
                   />
-                  <TextBlock title="결과물" value={item.deliverables} />
+                  {hasText(item.deliverables) ||
+                  item.deliverable_images.length > 0 ? (
+                    <div className="deliverable-block">
+                      <h3>결과물</h3>
+                      {hasText(item.deliverables) ? (
+                        <div className="deliverable-text">
+                          {filledLines(item.deliverables).map((line, index) => (
+                            <p key={`deliverable-${item.id}-${index}`}>{line}</p>
+                          ))}
+                        </div>
+                      ) : null}
+                      {item.deliverable_images.length > 0 ? (
+                        <ul className="deliverable-grid">
+                          {item.deliverable_images.map((image) => (
+                            <li key={image.id}>
+                              <img
+                                src={image.dataUrl}
+                                alt={image.name || "결과물 이미지"}
+                              />
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+                    </div>
+                  ) : null}
                   <div
                     className={
                       photos.length === 0
@@ -371,7 +422,11 @@ export function ReportView({
                   rows={[
                     { label: "사용자", value: item.users },
                     { label: "사용중인 AI 서비스", value: item.serviceName },
-                    { label: "활용사례/결과물", value: item.usage },
+                    {
+                      label: "활용사례/결과물",
+                      value: item.usage,
+                      images: item.usage_images ?? [],
+                    },
                     { label: "스터디와의 연관성", value: item.relevance },
                   ]}
                 />

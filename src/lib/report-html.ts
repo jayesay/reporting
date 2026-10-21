@@ -82,6 +82,16 @@ function multilineValue(value: string) {
   return escapeHtml(trimmed).replaceAll("\n", "<br>");
 }
 
+function imageTags(images: { dataUrl: string }[] | undefined) {
+  return (images ?? [])
+    .map(
+      (image) =>
+        `<img src="${escapeHtml(image.dataUrl)}" alt="" style="display:block;width:100%;max-width:100%;height:auto;margin:8px 0 0;border:1px solid #d7e3e1;border-radius:10px;" />`,
+    )
+    .join("");
+}
+
+
 function buildAiSection(report: ReportInput) {
   if (report.ai_services.length === 0) {
     return `<div style="${styles.block}"><p style="${styles.p}">-</p></div>`;
@@ -94,7 +104,12 @@ function buildAiSection(report: ReportInput) {
         `<ul style="${styles.ulInner}">`,
         rowInline("사용자", textOrDash(item.users)),
         rowInline("사용중인 AI 서비스", textOrDash(item.serviceName)),
-        rowInline("활용사례/결과물", textOrDash(item.usage)),
+        (item.usage_images?.length ?? 0) > 0
+          ? rowStacked(
+              "활용사례/결과물",
+              `${item.usage.trim() ? multilineValue(item.usage) : ""}${imageTags(item.usage_images)}`,
+            )
+          : rowInline("활용사례/결과물", textOrDash(item.usage)),
         rowInline("스터디와의 연관성", textOrDash(item.relevance)),
         `</ul>`,
         `</div>`,
@@ -133,8 +148,13 @@ export function reportToHtml(report: ReportInput) {
         rowInline("활동 주제", textOrDash(item.topic)),
         rowStacked("스터디 내용", multilineValue(item.study_content)),
         `</ul>`,
-        `<h3 style="${styles.subhead}">결과물</h3>`,
-        multilineInline(item.deliverables),
+        item.deliverables.trim() || item.deliverable_images.length > 0
+          ? `<h3 style="${styles.subhead}">결과물</h3>`
+          : "",
+        item.deliverables.trim()
+          ? multilineInline(item.deliverables)
+          : "",
+        imageTags(item.deliverable_images),
         `<div style="${styles.photo}">이 회차 활동 사진 첨부 영역<br>(게시판 업로드 시 직접 첨부)</div>`,
         `</div>`,
       ].join(""),

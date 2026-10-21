@@ -1,11 +1,19 @@
 export type ReportStatus = "draft" | "done";
 
+export type DeliverableImage = {
+  id: string;
+  name: string;
+  dataUrl: string;
+  bytes: number;
+};
+
 export type AiServiceEntry = {
   id: string;
   serviceName: string;
   users: string;
   usage: string;
   relevance: string;
+  usage_images: DeliverableImage[];
 };
 
 export type JournalEntry = {
@@ -18,6 +26,7 @@ export type JournalEntry = {
   attendees: string[];
   study_content: string;
   deliverables: string;
+  deliverable_images: DeliverableImage[];
 };
 
 export type NextPlanEntry = {
@@ -53,6 +62,8 @@ export type ReportInput = Omit<
 
 export const MAX_JOURNAL_COUNT = 2;
 export const MAX_NEXT_PLAN_COUNT = 2;
+/** 항목당 결과물 이미지 업로드 원본 합계. 저장 시 압축하므로 압축 후 용량보다 크게 둔다. */
+export const MAX_DELIVERABLE_IMAGE_BYTES = 10 * 1024 * 1024;
 
 let aiServiceSeq = 0;
 let journalSeq = 0;
@@ -66,7 +77,26 @@ export function createEmptyAiService(): AiServiceEntry {
     users: "",
     usage: "",
     relevance: "",
+    usage_images: [],
   };
+}
+
+export function normalizeAiService(value: unknown): AiServiceEntry {
+  const row =
+    value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  return {
+    id: asText(row.id) || createEmptyAiService().id,
+    serviceName: asText(row.serviceName),
+    users: asText(row.users),
+    usage: asText(row.usage),
+    relevance: asText(row.relevance),
+    usage_images: normalizeDeliverableImages(row.usage_images),
+  };
+}
+
+export function normalizeAiServices(value: unknown): AiServiceEntry[] {
+  const list = Array.isArray(value) ? value.map(normalizeAiService) : [];
+  return list.length > 0 ? list : [createEmptyAiService()];
 }
 
 export function normalizeNameList(value: unknown): string[] {
@@ -89,6 +119,7 @@ export function createEmptyJournal(teamMembers: string[] = []): JournalEntry {
     attendees: normalizeNameList(teamMembers),
     study_content: "",
     deliverables: "",
+    deliverable_images: [],
   };
 }
 
@@ -117,6 +148,59 @@ function asText(value: unknown) {
   return typeof value === "string" ? value : "";
 }
 
+export function deliverableImagesBytes(images: DeliverableImage[]) {
+  return images.reduce((sum, image) => sum + image.bytes, 0);
+}
+
+export function formatByteSize(bytes: number) {
+  const mb = 1024 * 1024;
+  const kb = 1024;
+  if (bytes >= mb) {
+    const value = bytes / mb;
+    const text =
+      value >= 10 || Number.isInteger(value)
+        ? String(Math.round(value))
+        : value.toFixed(1).replace(/\.0$/, "");
+    return `${text}MB`;
+  }
+  if (bytes >= kb) return `${Math.max(1, Math.round(bytes / kb))}KB`;
+  return `${bytes}B`;
+}
+
+export function normalizeDeliverableImages(value: unknown): DeliverableImage[] {
+  if (!Array.isArray(value)) return [];
+  const images = value
+    .filter(
+      (item): item is Record<string, unknown> =>
+        Boolean(item) && typeof item === "object",
+    )
+    .map((item) => {
+      const dataUrl = asText(item.dataUrl);
+      const storedBytes =
+        typeof item.bytes === "number" &&
+        Number.isFinite(item.bytes) &&
+        item.bytes > 0
+          ? Math.floor(item.bytes)
+          : dataUrl.length;
+      return {
+        id: asText(item.id) || `img-${Math.random().toString(36).slice(2, 8)}`,
+        name: asText(item.name),
+        dataUrl,
+        bytes: storedBytes,
+      };
+    })
+    .filter((item) => item.dataUrl.startsWith("data:image/"));
+
+  const kept: DeliverableImage[] = [];
+  for (const image of images) {
+    if (deliverableImagesBytes(kept) + image.bytes > MAX_DELIVERABLE_IMAGE_BYTES) {
+      continue;
+    }
+    kept.push(image);
+  }
+  return kept;
+}
+
 export function normalizeJournal(
   value: unknown,
   fallbackMembers: string[] = [],
@@ -137,6 +221,7 @@ export function normalizeJournal(
       : normalizeNameList(fallbackMembers),
     study_content: asText(row.study_content),
     deliverables: asText(row.deliverables),
+    deliverable_images: normalizeDeliverableImages(row.deliverable_images),
   };
 }
 
@@ -160,7 +245,8 @@ export function journalHasContent(item: JournalEntry) {
       item.topic.trim() ||
       item.attendees.length > 0 ||
       item.study_content.trim() ||
-      item.deliverables.trim(),
+      item.deliverables.trim() ||
+      item.deliverable_images.length > 0,
   );
 }
 
@@ -195,6 +281,7 @@ function fallbackJournal(
       : normalizeNameList(teamMembers),
     study_content: asText(row.study_content),
     deliverables: asText(row.deliverables),
+    deliverable_images: [],
   };
 }
 
