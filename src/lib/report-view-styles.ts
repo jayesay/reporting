@@ -121,11 +121,24 @@ export const REPORT_VIEW_CSS = `
 .view-html-root .ai-card:last-child {
   margin-bottom: 0;
 }
-.view-html-root .ai-card h3 {
-  margin-top: 0;
-}
 .view-html-root .ai-card ul {
-  margin-top: 6px;
+  margin: 0;
+  padding: 0 0 0 1.15rem;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+.view-html-root .text-block h3 {
+  margin: 18px 0 8px;
+}
+.view-html-root .ai-card .text-block {
+  margin-top: 16px;
+}
+.view-html-root .ai-card .text-block h3 {
+  margin: 0 0 8px;
+  color: var(--teal-deep);
+}
+.view-html-root .ai-card .text-block .block {
   margin-bottom: 0;
 }
 .view-html-root .block p,
@@ -139,61 +152,72 @@ export const REPORT_VIEW_CSS = `
 .view-html-root .ai-card p:last-child {
   margin-bottom: 0;
 }
-.view-html-root .photo {
-  margin: 0 0 12px;
-  padding: 28px 16px;
+.view-html-root .photo-file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.view-html-root .photo-dropzone {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 36px 16px;
   border: 1px dashed var(--line);
   border-radius: 10px;
   background: var(--paper);
   color: var(--muted);
   text-align: center;
+  font: inherit;
   font-size: 14px;
   line-height: 1.6;
+  cursor: pointer;
 }
-.view-html-root .photo span {
-  display: inline-block;
-  margin-top: 4px;
+.view-html-root .photo-dropzone:hover,
+.view-html-root .photo-dropzone:focus-visible {
+  border-color: var(--teal);
+  color: var(--teal-deep);
+}
+.view-html-root .photo-dropzone span {
+  display: block;
+  margin-top: 6px;
   font-size: 12px;
 }
-.view-html-root .photo .photo-help {
-  margin-top: 10px;
-  flex: none;
+.view-html-root .photo-block {
+  margin-top: 12px;
 }
-.view-html-root .photo-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 12px;
+.view-html-root .ai-card .photo-grid {
+  margin: 0;
+  padding: 0;
+  width: 100%;
 }
-.view-html-root .photo-add-btn,
-.view-html-root .photo-save-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 8px 12px;
-  background: var(--heading-bg, var(--mist));
-  color: var(--teal-deep);
+.view-html-root .photo-add {
+  display: block;
+  width: 100%;
+  margin: 12px 0 0;
+  padding: 12px 16px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  color: var(--muted);
+  text-align: center;
   font: inherit;
   font-size: 14px;
   font-weight: 700;
   cursor: pointer;
 }
-.view-html-root .photo-add-btn {
-  position: relative;
-  overflow: hidden;
-}
-.view-html-root .photo-add-btn input {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: pointer;
+.view-html-root .photo-add:hover,
+.view-html-root .photo-add:focus-visible {
+  border-color: var(--teal);
+  color: var(--teal-deep);
 }
 .view-html-root .photo-help {
-  flex: 1 1 100%;
-  margin: 0;
+  margin: 10px 0 0;
   color: var(--muted);
   font-size: 13px;
 }
@@ -223,23 +247,34 @@ export const REPORT_VIEW_CSS = `
   border-radius: 10px;
   object-fit: contain;
 }
-.view-html-root .photo-item figcaption,
-.view-html-root .photo-item .caption {
-  margin-top: 6px;
-  color: var(--muted);
-  font-size: 12px;
-  word-break: break-all;
-}
 .view-html-root .photo-remove {
-  margin-top: 6px;
-  border: 1px solid var(--line);
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  margin: 0;
+  border: 1px solid rgba(180, 35, 24, 0.25);
   border-radius: 8px;
-  padding: 4px 8px;
-  background: #fff;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.94);
   color: #b42318;
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+.view-html-root .photo-item:hover .photo-remove,
+.view-html-root .photo-item:focus-within .photo-remove {
+  opacity: 1;
+  pointer-events: auto;
+}
+@media (hover: none) {
+  .view-html-root .photo-item .photo-remove {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 .view-html-root .view-topbar {
   width: min(860px, 100%);

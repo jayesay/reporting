@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { listGrantExpenses } from "@/app/actions/expenses";
 import { getWorkspacePublicBySlug } from "@/app/actions/workspaces";
 import { ExpenseLedger } from "@/components/ExpenseLedger";
+import { ScrollToTopButton } from "@/components/ScrollToTopButton";
 import { WorkspaceThemeShell } from "@/components/WorkspaceThemeShell";
 import { workspaceHomePath } from "@/lib/paths";
 
@@ -48,6 +49,7 @@ async function ExpensesContent({
             initialExpenses={result.expenses}
           />
         )}
+        <ScrollToTopButton />
       </main>
     </WorkspaceThemeShell>
   );

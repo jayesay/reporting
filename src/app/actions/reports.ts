@@ -3,8 +3,10 @@
 import { customAlphabet } from "nanoid";
 import {
   createEmptyReportInput,
-  normalizeSessionNo,
+  normalizeJournals,
+  normalizeNextPlans,
   type AiServiceEntry,
+  type JournalEntry,
   type Report,
   type ReportInput,
 } from "@/lib/types/report";
@@ -19,11 +21,68 @@ const createSlug = customAlphabet(
   12,
 );
 
-type DbReport = Omit<Report, "ai_services" | "attendees"> & {
+function mapSchemaError(message: string, fallback: string) {
+  const missingColumn =
+    (message.includes("journals") || message.includes("next_plans")) &&
+    (message.includes("schema cache") ||
+      message.includes("does not exist") ||
+      message.includes("Could not find"));
+  if (missingColumn) {
+    return "보고서 양식 테이블이 아직 반영되지 않았습니다. supabase/add_journals_and_next_plans.sql을 실행해 주세요.";
+  }
+  return message || fallback;
+}
+
+type DbReport = {
+  id: string;
+  slug: string;
+  status: Report["status"];
+  team_name: string;
+  author: string;
+  report_month: string;
   attendees: string[] | null;
+  journals: unknown;
+  session_no?: unknown;
+  meeting_start?: unknown;
+  meeting_end?: unknown;
+  location?: unknown;
+  topic?: unknown;
+  study_content?: unknown;
+  deliverables?: unknown;
+  achievements: string;
+  learnings: string;
+  difficulties: string;
   ai_services: AiServiceEntry[] | null;
+  next_plans: unknown;
+  next_meeting_date?: unknown;
+  next_topic?: unknown;
+  next_goals?: unknown;
+  created_at: string;
+  updated_at: string;
   workspace_id: string;
 };
+
+function journalsOf(row: {
+  journals?: unknown;
+  attendees?: unknown;
+  session_no?: unknown;
+  meeting_start?: unknown;
+  meeting_end?: unknown;
+  location?: unknown;
+  topic?: unknown;
+  study_content?: unknown;
+  deliverables?: unknown;
+}) {
+  return normalizeJournals(
+    row.journals,
+    row,
+    Array.isArray(row.attendees) ? row.attendees : [],
+  );
+}
+
+function firstJournal(journals: JournalEntry[]): JournalEntry | undefined {
+  return journals[0];
+}
 
 function normalizeReport(row: DbReport): Report {
   return {
@@ -33,21 +92,13 @@ function normalizeReport(row: DbReport): Report {
     team_name: row.team_name,
     author: row.author,
     report_month: row.report_month,
-    session_no: normalizeSessionNo(row.session_no),
     attendees: row.attendees ?? [],
-    meeting_start: row.meeting_start,
-    meeting_end: row.meeting_end,
-    location: row.location,
-    topic: row.topic,
-    study_content: row.study_content,
-    deliverables: row.deliverables,
+    journals: journalsOf(row),
     achievements: row.achievements,
     learnings: row.learnings,
     difficulties: row.difficulties,
     ai_services: row.ai_services ?? [],
-    next_meeting_date: row.next_meeting_date,
-    next_topic: row.next_topic,
-    next_goals: row.next_goals,
+    next_plans: normalizeNextPlans(row.next_plans, row),
     created_at: row.created_at,
     updated_at: row.updated_at,
     workspace_id: row.workspace_id,
@@ -55,26 +106,33 @@ function normalizeReport(row: DbReport): Report {
 }
 
 function toPayload(input: ReportInput, teamName: string) {
+  const journals = normalizeJournals(input.journals).slice(0, 2);
+  const nextPlans = normalizeNextPlans(input.next_plans).slice(0, 2);
+  const first = firstJournal(journals);
+  const firstPlan = nextPlans[0];
+
   return {
     status: input.status,
     team_name: teamName,
     author: input.author,
     report_month: input.report_month,
-    session_no: normalizeSessionNo(input.session_no),
+    session_no: first?.session_no ?? null,
     attendees: input.attendees.filter((name) => name.trim().length > 0),
-    meeting_start: input.meeting_start,
-    meeting_end: input.meeting_end,
-    location: input.location,
-    topic: input.topic,
-    study_content: input.study_content,
-    deliverables: input.deliverables,
+    meeting_start: first?.meeting_start ?? "",
+    meeting_end: first?.meeting_end ?? "",
+    location: first?.location ?? "",
+    topic: first?.topic ?? "",
+    study_content: first?.study_content ?? "",
+    deliverables: first?.deliverables ?? "",
+    journals,
     achievements: input.achievements,
     learnings: input.learnings,
     difficulties: input.difficulties,
     ai_services: input.ai_services,
-    next_meeting_date: input.next_meeting_date,
-    next_topic: input.next_topic,
-    next_goals: input.next_goals,
+    next_plans: nextPlans,
+    next_meeting_date: firstPlan?.meeting_date ?? "",
+    next_topic: firstPlan?.topic ?? "",
+    next_goals: firstPlan?.goals ?? "",
   };
 }
 
@@ -84,10 +142,7 @@ export type ReportListItem = {
   team_name: string;
   author: string;
   report_month: string;
-  topic: string;
-  session_no: number | null;
-  meeting_start: string;
-  meeting_end: string;
+  journals: JournalEntry[];
   updated_at: string;
 };
 
@@ -99,7 +154,7 @@ async function resolveWorkspace(workspaceSlug: string) {
   return getWorkspaceBySlug(workspaceSlug);
 }
 
-/** 가장 최근 보고서의 참석 인원 (새 보고서 기본값) */
+/** 가장 최근 보고서의 팀원 (새 보고서 기본값) */
 export async function getNewReportDefaults(
   workspaceSlug: string,
 ): Promise<NewReportDefaults> {
@@ -151,28 +206,40 @@ export async function listReports(
 
   try {
     const supabase = createSupabaseServerClient();
-    const { data, error } = await supabase
+    const fullSelect =
+      "slug, status, team_name, author, report_month, journals, topic, session_no, meeting_start, meeting_end, study_content, deliverables, location, updated_at";
+    const legacySelect =
+      "slug, status, team_name, author, report_month, topic, session_no, meeting_start, meeting_end, study_content, deliverables, location, updated_at";
+
+    const primary = await supabase
       .from("reports")
-      .select(
-        "slug, status, team_name, author, report_month, topic, session_no, meeting_start, meeting_end, updated_at",
-      )
+      .select(fullSelect)
       .eq("workspace_id", workspaceResult.workspace.id)
       .order("updated_at", { ascending: false });
 
-    if (error) {
-      return { ok: false, error: error.message };
+    const result =
+      primary.error && primary.error.message.includes("journals")
+        ? await supabase
+            .from("reports")
+            .select(legacySelect)
+            .eq("workspace_id", workspaceResult.workspace.id)
+            .order("updated_at", { ascending: false })
+        : primary;
+
+    if (result.error) {
+      return {
+        ok: false,
+        error: mapSchemaError(result.error.message, "목록을 불러오지 못했습니다."),
+      };
     }
 
-    const reports: ReportListItem[] = (data ?? []).map((row) => ({
+    const reports: ReportListItem[] = (result.data ?? []).map((row) => ({
       slug: row.slug as string,
       status: row.status as Report["status"],
       team_name: String(row.team_name ?? ""),
       author: String(row.author ?? ""),
       report_month: String(row.report_month ?? ""),
-      topic: String(row.topic ?? ""),
-      session_no: normalizeSessionNo(row.session_no),
-      meeting_start: String(row.meeting_start ?? ""),
-      meeting_end: String(row.meeting_end ?? ""),
+      journals: journalsOf(row),
       updated_at: row.updated_at as string,
     }));
 
@@ -220,7 +287,7 @@ export async function createReport(
       .single();
 
     if (error) {
-      return { ok: false, error: error.message };
+      return { ok: false, error: mapSchemaError(error.message, "보고서 생성에 실패했습니다.") };
     }
 
     return { ok: true, slug, updatedAt: data.updated_at as string };
@@ -327,7 +394,10 @@ export async function saveReport(
       .maybeSingle();
 
     if (error) {
-      return { ok: false, error: error.message };
+      return {
+        ok: false,
+        error: mapSchemaError(error.message, "저장에 실패했습니다."),
+      };
     }
 
     if (!data) {

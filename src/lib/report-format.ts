@@ -90,6 +90,19 @@ export function formatSessionNo(value: number | null | undefined) {
   return `${Math.floor(value)}회`;
 }
 
+/** 조회용: 1회 · 2026년 10월 12일 14시 00분 ~ 16시 00분 */
+export function formatSessionMeetingLine(
+  sessionNo: number | null | undefined,
+  meetingStart: string,
+  meetingEnd = "",
+) {
+  const session = formatSessionNo(sessionNo);
+  const meeting = formatMeetingRange(meetingStart, meetingEnd);
+  const meetingText = meeting === "-" ? "" : meeting;
+  if (session && meetingText) return `${session} · ${meetingText}`;
+  return session || meetingText;
+}
+
 /** 목록용: 1회 10.12 */
 export function formatSessionListSummary(
   sessionNo: number | null | undefined,
@@ -110,8 +123,18 @@ export function textOrDash(value: string) {
   return trimmed || "-";
 }
 
+export function hasText(value: string) {
+  return value.trim().length > 0;
+}
+
 export function multilineLines(value: string) {
   const trimmed = value.trim();
   if (!trimmed) return ["-"];
+  return trimmed.split(/\n+/);
+}
+
+export function filledLines(value: string) {
+  const trimmed = value.trim();
+  if (!trimmed) return [];
   return trimmed.split(/\n+/);
 }

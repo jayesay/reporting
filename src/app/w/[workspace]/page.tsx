@@ -3,6 +3,7 @@ import { listReports } from "@/app/actions/reports";
 import { getWorkspacePublicBySlug } from "@/app/actions/workspaces";
 import { CreateReportButton } from "@/components/CreateReportButton";
 import { ReportList } from "@/components/ReportList";
+import { ScrollToTopButton } from "@/components/ScrollToTopButton";
 import { WorkspaceThemeShell } from "@/components/WorkspaceThemeShell";
 
 async function WorkspaceHome({
@@ -47,6 +48,7 @@ async function WorkspaceHome({
             />
           )}
         </section>
+        <ScrollToTopButton />
       </main>
     </WorkspaceThemeShell>
   );

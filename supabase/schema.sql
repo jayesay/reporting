@@ -33,6 +33,7 @@ create table if not exists public.reports (
   topic text not null default '',
   study_content text not null default '',
   deliverables text not null default '',
+  journals jsonb not null default '[]'::jsonb,
 
   achievements text not null default '',
   learnings text not null default '',
@@ -43,6 +44,7 @@ create table if not exists public.reports (
   next_meeting_date text not null default '',
   next_topic text not null default '',
   next_goals text not null default '',
+  next_plans jsonb not null default '[]'::jsonb,
 
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

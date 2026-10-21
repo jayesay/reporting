@@ -1,8 +1,9 @@
+import { formatSessionMeetingLine } from "@/lib/report-format";
 import {
-  formatMeetingRange,
-  formatSessionNo,
-} from "@/lib/report-format";
-import type { ReportInput } from "@/lib/types/report";
+  journalHasContent,
+  nextPlanHasContent,
+  type ReportInput,
+} from "@/lib/types/report";
 
 const font =
   "font-family:'Noto Sans KR','Malgun Gothic','Apple SD Gothic Neo',sans-serif;";
@@ -12,7 +13,9 @@ const styles = {
   h1: `${font}margin:0 0 20px;padding-bottom:10px;border-bottom:2px solid #0f6e6a;color:#0a4f4c;font-size:22px;font-weight:700;line-height:1.3;`,
   h2: `${font}margin:28px 0 12px;padding:8px 12px;background:#e7f1f0;border-left:4px solid #0f6e6a;color:#0a4f4c;font-size:16px;font-weight:700;line-height:1.4;`,
   h3: `${font}margin:16px 0 8px;color:#12262b;font-size:14px;font-weight:700;line-height:1.4;`,
+  subhead: `${font}margin:16px 0 8px;color:#0a4f4c;font-size:14px;font-weight:700;line-height:1.4;`,
   ul: `${font}margin:0 0 12px;padding:12px 12px 12px 28px;background:#f7faf9;border:1px solid #d7e3e1;list-style:disc;`,
+  ulInner: `${font}margin:0;padding:0 0 0 22px;background:transparent;border:none;list-style:disc;`,
   li: `${font}margin:0 0 6px;color:#222;font-size:14px;line-height:1.6;`,
   p: `${font}margin:0 0 8px;padding:0;color:#222;font-size:14px;line-height:1.7;`,
   block: `${font}margin:0 0 12px;padding:12px 14px;background:#f7faf9;border:1px solid #d7e3e1;`,
@@ -81,14 +84,12 @@ function buildAiSection(report: ReportInput) {
   }
 
   return report.ai_services
-    .map((item, index) => {
-      const title = textOrDash(item.serviceName);
-      const heading = `${index + 1}. ${title === "-" ? "서비스명 미입력" : title}`;
+    .map((item) => {
       return [
         `<div style="${styles.aiCard}">`,
-        `<h3 style="${styles.h3}">${heading}</h3>`,
-        `<ul style="${styles.ul}">`,
+        `<ul style="${styles.ulInner}">`,
         rowInline("사용자", textOrDash(item.users)),
+        rowInline("사용중인 AI 서비스", textOrDash(item.serviceName)),
         rowInline("활용사례/결과물", textOrDash(item.usage)),
         rowInline("스터디와의 연관성", textOrDash(item.relevance)),
         `</ul>`,
@@ -104,6 +105,53 @@ export function reportToHtml(report: ReportInput) {
     report.attendees.filter(Boolean).map(escapeHtml).join(", ") || "-";
   const aiSection = buildAiSection(report);
 
+  const journalHtml = report.journals
+    .filter(journalHasContent)
+    .map((item) =>
+      [
+        `<div style="${styles.aiCard}">`,
+        `<ul style="${styles.ulInner}">`,
+        rowInline(
+          "회차 · 모임일시",
+          textOrDash(
+            formatSessionMeetingLine(
+              item.session_no,
+              item.meeting_start,
+              item.meeting_end,
+            ),
+          ),
+        ),
+        rowInline("장소", textOrDash(item.location)),
+        rowInline(
+          "참석자",
+          item.attendees.filter(Boolean).map(escapeHtml).join(", ") || "-",
+        ),
+        rowInline("활동 주제", textOrDash(item.topic)),
+        rowInline("스터디 내용", multilineValue(item.study_content)),
+        `</ul>`,
+        `<h3 style="${styles.subhead}">결과물</h3>`,
+        multilineInline(item.deliverables),
+        `<div style="${styles.photo}">이 회차 활동 사진 첨부 영역<br>(게시판 업로드 시 직접 첨부)</div>`,
+        `</div>`,
+      ].join(""),
+    )
+    .join("");
+
+  const planHtml = report.next_plans
+    .filter(nextPlanHasContent)
+    .map((item) =>
+      [
+        `<div style="${styles.aiCard}">`,
+        `<ul style="${styles.ulInner}">`,
+        rowInline("모임 예정일", formatDate(item.meeting_date)),
+        rowInline("다음 주제", textOrDash(item.topic)),
+        rowInline("목표", multilineValue(item.goals)),
+        `</ul>`,
+        `</div>`,
+      ].join(""),
+    )
+    .join("");
+
   return [
     `<div style="${styles.wrap}">`,
     `<h1 style="${styles.h1}">INNOSIGHT 활동보고서</h1>`,
@@ -112,25 +160,10 @@ export function reportToHtml(report: ReportInput) {
     rowInline("팀명", textOrDash(report.team_name)),
     rowInline("작성자", textOrDash(report.author)),
     rowInline("보고 월", formatYearMonth(report.report_month)),
-    rowInline("회차", formatSessionNo(report.session_no) || "-"),
-    rowInline("참석 인원", attendees),
+    rowInline("팀원", attendees),
     `</ul>`,
     `<h2 style="${styles.h2}">2. 활동일지</h2>`,
-    `<ul style="${styles.ul}">`,
-    rowInline(
-      "모임일시",
-      formatMeetingRange(report.meeting_start, report.meeting_end),
-    ),
-    rowInline("장소", textOrDash(report.location)),
-    rowInline("참석자", attendees),
-    rowInline("활동 주제", textOrDash(report.topic)),
-    `</ul>`,
-    `<h3 style="${styles.h3}">스터디 내용</h3>`,
-    multilineInline(report.study_content),
-    `<h3 style="${styles.h3}">결과물</h3>`,
-    multilineInline(report.deliverables),
-    `<h3 style="${styles.h3}">사진</h3>`,
-    `<div style="${styles.photo}">활동 사진 첨부 영역<br>(게시판 업로드 시 직접 첨부)</div>`,
+    journalHtml || `<div style="${styles.block}"><p style="${styles.p}">-</p></div>`,
     `<h2 style="${styles.h2}">3. 이달 결과와 이슈</h2>`,
     `<h3 style="${styles.h3}">달성한 것</h3>`,
     multilineInline(report.achievements),
@@ -138,14 +171,10 @@ export function reportToHtml(report: ReportInput) {
     multilineInline(report.learnings),
     `<h3 style="${styles.h3}">어려웠던 점</h3>`,
     multilineInline(report.difficulties),
-    `<h2 style="${styles.h2}">4. AI 서비스 관련</h2>`,
+    `<h2 style="${styles.h2}">4. AI 서비스 사용 현황</h2>`,
     aiSection,
     `<h2 style="${styles.h2}">5. 다음 모임 계획</h2>`,
-    `<ul style="${styles.ul}">`,
-    rowInline("모임 예정일", formatDate(report.next_meeting_date)),
-    rowInline("다음 주제", textOrDash(report.next_topic)),
-    rowInline("목표", multilineValue(report.next_goals)),
-    `</ul>`,
+    planHtml || `<div style="${styles.block}"><p style="${styles.p}">-</p></div>`,
     `</div>`,
   ].join("");
 }

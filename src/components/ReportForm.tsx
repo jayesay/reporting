@@ -8,6 +8,7 @@ import {
   deleteReport,
   saveReport,
 } from "@/app/actions/reports";
+import { ScrollToTopButton } from "@/components/ScrollToTopButton";
 import { formatSeoulDateTime } from "@/lib/format-datetime";
 import {
   workspaceHomePath,
@@ -21,8 +22,16 @@ import {
 } from "@/lib/report-format";
 import {
   createEmptyAiService,
+  createEmptyJournal,
+  createEmptyNextPlan,
   createEmptyReportInput,
+  MAX_JOURNAL_COUNT,
+  MAX_NEXT_PLAN_COUNT,
+  normalizeJournals,
+  normalizeNextPlans,
   normalizeSessionNo,
+  type JournalEntry,
+  type NextPlanEntry,
   type Report,
   type ReportInput,
 } from "@/lib/types/report";
@@ -56,18 +65,160 @@ function snapTimeToTenMinutes(value: string) {
   return `${String(nextHour).padStart(2, "0")}:${String(snapped).padStart(2, "0")}`;
 }
 
+function JournalCard({
+  item,
+  canDelete,
+  onChange,
+  onDelete,
+}: {
+  item: JournalEntry;
+  canDelete: boolean;
+  onChange: (next: JournalEntry) => void;
+  onDelete: () => void;
+}) {
+  const { date, startTime, endTime } = splitMeetingFields(
+    item.meeting_start,
+    item.meeting_end,
+  );
+
+  function updateMeeting(nextDate: string, nextStart: string, nextEnd: string) {
+    onChange({
+      ...item,
+      meeting_start: joinMeetingDateTime(nextDate, nextStart),
+      meeting_end: joinMeetingDateTime(nextDate, nextEnd),
+    });
+  }
+
+  return (
+    <div className="repeat-block relative">
+      <button
+        type="button"
+        className="btn ghost danger compact absolute top-2 right-2 z-10"
+        onClick={onDelete}
+        disabled={!canDelete}
+      >
+        삭제
+      </button>
+      <div className="journal-when-row">
+        <div className="field session-field">
+          <label>회차</label>
+          <input
+            type="number"
+            min={1}
+            step={1}
+            inputMode="numeric"
+            placeholder="예: 1"
+            value={item.session_no ?? ""}
+            onChange={(e) =>
+              onChange({
+                ...item,
+                session_no: normalizeSessionNo(e.target.value),
+              })
+            }
+          />
+        </div>
+        <div className="field meeting-datetime-field">
+          <span className="field-label">모임일시</span>
+          <div className="meeting-datetime-row">
+          <input
+            type="date"
+            aria-label="모임 날짜"
+            value={date}
+            onChange={(e) => updateMeeting(e.target.value, startTime, endTime)}
+          />
+          <input
+            type="time"
+            step={600}
+            aria-label="시작 시간"
+            value={startTime}
+            onChange={(e) =>
+              updateMeeting(date, snapTimeToTenMinutes(e.target.value), endTime)
+            }
+          />
+          <span className="meeting-datetime-sep" aria-hidden>
+            ~
+          </span>
+          <input
+            type="time"
+            step={600}
+            aria-label="종료 시간"
+            value={endTime}
+            onChange={(e) =>
+              updateMeeting(
+                date,
+                startTime,
+                snapTimeToTenMinutes(e.target.value),
+              )
+            }
+          />
+          </div>
+        </div>
+      </div>
+      <div className="grid-2">
+        <div className="field">
+          <label>장소</label>
+          <input
+            value={item.location}
+            onChange={(e) => onChange({ ...item, location: e.target.value })}
+          />
+        </div>
+        <div className="field">
+          <label>활동 주제</label>
+          <input
+            value={item.topic}
+            onChange={(e) => onChange({ ...item, topic: e.target.value })}
+          />
+        </div>
+      </div>
+      <TagListInput
+        label="참석자"
+        hint="이 모임에 참석한 사람만 남기거나 추가할 수 있습니다."
+        values={item.attendees}
+        onChange={(values) => onChange({ ...item, attendees: values })}
+      />
+      <div className="field">
+        <label>스터디 내용</label>
+        <textarea
+          rows={6}
+          value={item.study_content}
+          onChange={(e) =>
+            onChange({ ...item, study_content: e.target.value })
+          }
+        />
+      </div>
+      <div className="field">
+        <label>결과물</label>
+        <textarea
+          rows={4}
+          value={item.deliverables}
+          onChange={(e) =>
+            onChange({ ...item, deliverables: e.target.value })
+          }
+        />
+      </div>
+      <div className="field">
+        <label>사진</label>
+        <div className="photo-placeholder">
+          <p>사진은 조회 페이지에서 이 회차별로 추가합니다.</p>
+          <p>저장 후 조회하기에서 해당 활동일지의 사진 영역을 클릭하세요.</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function toInput(
   report: Report | undefined,
   workspaceName: string,
   defaultAttendees: string[] = [],
 ): ReportInput {
   if (!report) {
+    const members = defaultAttendees.map((item) => item.trim()).filter(Boolean);
     return {
       ...createEmptyReportInput(),
       team_name: workspaceName,
-      attendees: defaultAttendees
-        .map((item) => item.trim())
-        .filter(Boolean),
+      attendees: members,
+      journals: [createEmptyJournal(members)],
     };
   }
 
@@ -76,14 +227,8 @@ function toInput(
     team_name: workspaceName,
     author: report.author,
     report_month: report.report_month,
-    session_no: normalizeSessionNo(report.session_no),
     attendees: report.attendees,
-    meeting_start: report.meeting_start,
-    meeting_end: report.meeting_end,
-    location: report.location,
-    topic: report.topic,
-    study_content: report.study_content,
-    deliverables: report.deliverables,
+    journals: normalizeJournals(report.journals, undefined, report.attendees),
     achievements: report.achievements,
     learnings: report.learnings,
     difficulties: report.difficulties,
@@ -91,9 +236,7 @@ function toInput(
       report.ai_services.length > 0
         ? report.ai_services
         : [createEmptyAiService()],
-    next_meeting_date: report.next_meeting_date,
-    next_topic: report.next_topic,
-    next_goals: report.next_goals,
+    next_plans: normalizeNextPlans(report.next_plans),
   };
 }
 
@@ -109,15 +252,6 @@ export function ReportForm({
   const [form, setForm] = useState<ReportInput>(() =>
     toInput(report, workspaceName, defaultAttendees),
   );
-  const initialMeeting = splitMeetingFields(
-    report?.meeting_start ?? "",
-    report?.meeting_end ?? "",
-  );
-  const [meetingDate, setMeetingDate] = useState(initialMeeting.date);
-  const [meetingStartTime, setMeetingStartTime] = useState(
-    initialMeeting.startTime,
-  );
-  const [meetingEndTime, setMeetingEndTime] = useState(initialMeeting.endTime);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState(report?.updated_at ?? "");
@@ -128,25 +262,6 @@ export function ReportForm({
   const formRef = useRef(form);
   slugRef.current = slug;
   formRef.current = form;
-
-  function syncMeetingFields(
-    date: string,
-    startTime: string,
-    endTime: string,
-  ) {
-    const nextStart = joinMeetingDateTime(date, startTime);
-    const nextEnd = joinMeetingDateTime(date, endTime);
-    setForm((prev) => {
-      const next = {
-        ...prev,
-        team_name: workspaceName,
-        meeting_start: nextStart,
-        meeting_end: nextEnd,
-      };
-      formRef.current = next;
-      return next;
-    });
-  }
 
   useEffect(() => {
     if (report) return;
@@ -159,11 +274,19 @@ export function ReportForm({
 
     setForm((prev) => {
       if (prev.attendees.length > 0) return prev;
-      const next = { ...prev, attendees: storedAttendees };
+      const next = {
+        ...prev,
+        attendees: storedAttendees,
+        journals: prev.journals.map((item, index) =>
+          index === 0 && item.attendees.length === 0
+            ? { ...item, attendees: storedAttendees }
+            : item,
+        ),
+      };
       formRef.current = next;
       return next;
     });
-    // 새 보고서 첫 로드에서만 로컬 참석자 보정
+    // 새 보고서 첫 로드에서만 로컬 팀원 보정
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [report, workspaceSlug]);
 
@@ -180,6 +303,20 @@ export function ReportForm({
       [key]: value,
       team_name: workspaceName,
     }));
+  }
+
+  function patchJournal(id: string, next: JournalEntry) {
+    patch(
+      "journals",
+      form.journals.map((row) => (row.id === id ? next : row)),
+    );
+  }
+
+  function patchPlan(id: string, next: NextPlanEntry) {
+    patch(
+      "next_plans",
+      form.next_plans.map((row) => (row.id === id ? next : row)),
+    );
   }
 
   async function persist(next: ReportInput = formRef.current) {
@@ -358,139 +495,56 @@ export function ReportForm({
               />
             </div>
           </div>
-          <div className="grid-2">
-            <div className="field">
-              <label htmlFor="report_month">보고 월</label>
-              <input
-                id="report_month"
-                type="month"
-                value={form.report_month}
-                onChange={(e) => patch("report_month", e.target.value)}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="session_no">회차</label>
-              <input
-                id="session_no"
-                type="number"
-                min={1}
-                step={1}
-                inputMode="numeric"
-                placeholder="예: 1"
-                value={form.session_no ?? ""}
-                onChange={(e) =>
-                  patch("session_no", normalizeSessionNo(e.target.value))
-                }
-              />
-            </div>
+          <div className="field">
+            <label htmlFor="report_month">보고 월</label>
+            <input
+              id="report_month"
+              type="month"
+              value={form.report_month}
+              onChange={(e) => patch("report_month", e.target.value)}
+            />
+            <p className="hint">이 보고서는 선택한 달의 월별 활동보고서입니다.</p>
           </div>
           <TagListInput
-            label="참석 인원"
-            hint="쉼표로 여러 명을 한 번에 입력할 수 있습니다. 한 번 저장하면 새 보고서에 자동으로 채워집니다."
+            label="팀원"
+            hint="쉼표로 여러 명을 한 번에 입력할 수 있습니다. 한 번 저장하면 새 보고서와 새 활동일지 참석자에 기본으로 채워집니다."
             values={form.attendees}
             onChange={(values) => patch("attendees", values)}
           />
         </section>
 
         <section className="section">
-          <h2>2. 활동일지</h2>
-          <div className="field meeting-datetime-field">
-            <span className="field-label">모임일시</span>
-            <div className="meeting-datetime-row">
-              <input
-                id="meeting_date"
-                type="date"
-                aria-label="모임 날짜"
-                value={meetingDate}
-                onChange={(e) => {
-                  const nextDate = e.target.value;
-                  setMeetingDate(nextDate);
-                  syncMeetingFields(
-                    nextDate,
-                    meetingStartTime,
-                    meetingEndTime,
-                  );
-                }}
-              />
-              <input
-                id="meeting_start_time"
-                type="time"
-                step={600}
-                aria-label="시작 시간"
-                value={meetingStartTime}
-                onChange={(e) => {
-                  const nextTime = snapTimeToTenMinutes(e.target.value);
-                  setMeetingStartTime(nextTime);
-                  syncMeetingFields(meetingDate, nextTime, meetingEndTime);
-                }}
-              />
-              <span className="meeting-datetime-sep" aria-hidden>
-                ~
-              </span>
-              <input
-                id="meeting_end_time"
-                type="time"
-                step={600}
-                aria-label="종료 시간"
-                value={meetingEndTime}
-                onChange={(e) => {
-                  const nextTime = snapTimeToTenMinutes(e.target.value);
-                  setMeetingEndTime(nextTime);
-                  syncMeetingFields(meetingDate, meetingStartTime, nextTime);
-                }}
-              />
-            </div>
+          <div className="section-head">
+            <h2>2. 활동일지</h2>
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() =>
+                patch("journals", [
+                  ...form.journals,
+                  createEmptyJournal(form.attendees),
+                ])
+              }
+              disabled={form.journals.length >= MAX_JOURNAL_COUNT}
+            >
+              추가
+            </button>
           </div>
-          <div className="grid-2">
-            <div className="field">
-              <label htmlFor="location">장소</label>
-              <input
-                id="location"
-                value={form.location}
-                onChange={(e) => patch("location", e.target.value)}
+          <div className="stack">
+            {form.journals.map((item) => (
+              <JournalCard
+                key={item.id}
+                item={item}
+                canDelete={form.journals.length > 1}
+                onChange={(next) => patchJournal(item.id, next)}
+                onDelete={() =>
+                  patch(
+                    "journals",
+                    form.journals.filter((row) => row.id !== item.id),
+                  )
+                }
               />
-            </div>
-            <div className="field">
-              <label htmlFor="topic">활동 주제</label>
-              <input
-                id="topic"
-                value={form.topic}
-                onChange={(e) => patch("topic", e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="field">
-            <label>참석자</label>
-            <p className="readonly-chip">
-              {form.attendees.length > 0
-                ? form.attendees.join(", ")
-                : "팀정보에서 참석 인원을 추가하세요."}
-            </p>
-          </div>
-          <div className="field">
-            <label htmlFor="study_content">스터디 내용</label>
-            <textarea
-              id="study_content"
-              rows={6}
-              value={form.study_content}
-              onChange={(e) => patch("study_content", e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label htmlFor="deliverables">결과물</label>
-            <textarea
-              id="deliverables"
-              rows={4}
-              value={form.deliverables}
-              onChange={(e) => patch("deliverables", e.target.value)}
-            />
-          </div>
-          <div className="field">
-            <label>사진</label>
-            <div className="photo-placeholder">
-              <p>사진은 작성 화면이 아니라 조회 페이지에서 추가합니다.</p>
-              <p>저장 후 상단의 조회하기에서 로컬로 넣을 수 있습니다.</p>
-            </div>
+            ))}
           </div>
         </section>
 
@@ -527,7 +581,7 @@ export function ReportForm({
 
         <section className="section">
           <div className="section-head">
-            <h2>4. AI 서비스 관련</h2>
+            <h2>4. AI 서비스 사용 현황</h2>
             <button
               type="button"
               className="btn ghost"
@@ -535,45 +589,26 @@ export function ReportForm({
                 patch("ai_services", [...form.ai_services, createEmptyAiService()])
               }
             >
-              서비스 추가
+              추가
             </button>
           </div>
           <div className="stack">
-            {form.ai_services.map((item, index) => (
-              <div key={item.id} className="repeat-block">
-                <div className="repeat-head">
-                  <h3>서비스 {index + 1}</h3>
-                  <button
-                    type="button"
-                    className="btn ghost danger"
-                    onClick={() =>
-                      patch(
-                        "ai_services",
-                        form.ai_services.filter((row) => row.id !== item.id),
-                      )
-                    }
-                    disabled={form.ai_services.length === 1}
-                  >
-                    삭제
-                  </button>
-                </div>
+            {form.ai_services.map((item) => (
+              <div key={item.id} className="repeat-block relative">
+                <button
+                  type="button"
+                  className="btn ghost danger compact absolute top-2 right-2 z-10"
+                  onClick={() =>
+                    patch(
+                      "ai_services",
+                      form.ai_services.filter((row) => row.id !== item.id),
+                    )
+                  }
+                  disabled={form.ai_services.length === 1}
+                >
+                  삭제
+                </button>
                 <div className="grid-2">
-                  <div className="field">
-                    <label>서비스명</label>
-                    <input
-                      value={item.serviceName}
-                      onChange={(e) =>
-                        patch(
-                          "ai_services",
-                          form.ai_services.map((row) =>
-                            row.id === item.id
-                              ? { ...row, serviceName: e.target.value }
-                              : row,
-                          ),
-                        )
-                      }
-                    />
-                  </div>
                   <div className="field">
                     <label>사용자</label>
                     <input
@@ -584,6 +619,22 @@ export function ReportForm({
                           form.ai_services.map((row) =>
                             row.id === item.id
                               ? { ...row, users: e.target.value }
+                              : row,
+                          ),
+                        )
+                      }
+                    />
+                  </div>
+                  <div className="field">
+                    <label>사용중인 AI 서비스</label>
+                    <input
+                      value={item.serviceName}
+                      onChange={(e) =>
+                        patch(
+                          "ai_services",
+                          form.ai_services.map((row) =>
+                            row.id === item.id
+                              ? { ...row, serviceName: e.target.value }
                               : row,
                           ),
                         )
@@ -631,37 +682,75 @@ export function ReportForm({
         </section>
 
         <section className="section">
-          <h2>5. 다음 모임 계획</h2>
-          <div className="grid-2">
-            <div className="field">
-              <label htmlFor="next_meeting_date">모임 예정일</label>
-              <input
-                id="next_meeting_date"
-                type="date"
-                value={form.next_meeting_date}
-                onChange={(e) => patch("next_meeting_date", e.target.value)}
-              />
-            </div>
-            <div className="field">
-              <label htmlFor="next_topic">다음 주제</label>
-              <input
-                id="next_topic"
-                value={form.next_topic}
-                onChange={(e) => patch("next_topic", e.target.value)}
-              />
-            </div>
+          <div className="section-head">
+            <h2>5. 다음 모임 계획</h2>
+            <button
+              type="button"
+              className="btn ghost"
+              onClick={() =>
+                patch("next_plans", [...form.next_plans, createEmptyNextPlan()])
+              }
+              disabled={form.next_plans.length >= MAX_NEXT_PLAN_COUNT}
+            >
+              추가
+            </button>
           </div>
-          <div className="field">
-            <label htmlFor="next_goals">목표</label>
-            <textarea
-              id="next_goals"
-              rows={4}
-              value={form.next_goals}
-              onChange={(e) => patch("next_goals", e.target.value)}
-            />
+          <div className="stack">
+            {form.next_plans.map((item) => (
+              <div key={item.id} className="repeat-block relative">
+                <button
+                  type="button"
+                  className="btn ghost danger compact absolute top-2 right-2 z-10"
+                  onClick={() =>
+                    patch(
+                      "next_plans",
+                      form.next_plans.filter((row) => row.id !== item.id),
+                    )
+                  }
+                  disabled={form.next_plans.length === 1}
+                >
+                  삭제
+                </button>
+                <div className="grid-2">
+                  <div className="field">
+                    <label>모임 예정일</label>
+                    <input
+                      type="date"
+                      value={item.meeting_date}
+                      onChange={(e) =>
+                        patchPlan(item.id, {
+                          ...item,
+                          meeting_date: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div className="field">
+                    <label>다음 주제</label>
+                    <input
+                      value={item.topic}
+                      onChange={(e) =>
+                        patchPlan(item.id, { ...item, topic: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="field">
+                  <label>목표</label>
+                  <textarea
+                    rows={4}
+                    value={item.goals}
+                    onChange={(e) =>
+                      patchPlan(item.id, { ...item, goals: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+            ))}
           </div>
         </section>
       </form>
+      <ScrollToTopButton />
     </div>
   );
 }
