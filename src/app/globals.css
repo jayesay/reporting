@@ -406,15 +406,24 @@ a {
   white-space: nowrap;
 }
 
-.report-table .topic-cell a {
+.report-table tbody td.topic-cell a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
   white-space: normal;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  overflow: hidden;
+  text-overflow: clip;
+  line-height: 1.2;
+}
+
+.report-table tbody td.topic-cell .topic-line {
+  display: block;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  word-break: keep-all;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  line-height: 1.2;
 }
 
 .report-table time {

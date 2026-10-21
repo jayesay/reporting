@@ -20,11 +20,12 @@ function cell(value: string, fallback = "-") {
   return text || fallback;
 }
 
-function topicSummary(report: ReportListItem) {
-  const topics = report.journals
-    .map((item) => item.topic.trim())
-    .filter(Boolean);
-  return topics.length > 0 ? topics.join(" · ") : "-";
+function topicLines(report: ReportListItem) {
+  return report.journals.flatMap((item) => {
+    const topic = item.topic.trim();
+    if (!topic) return [];
+    return [{ id: item.id, text: topic }];
+  });
 }
 
 export function ReportList({ workspaceSlug, reports }: ReportListProps) {
@@ -51,6 +52,7 @@ export function ReportList({ workspaceSlug, reports }: ReportListProps) {
         <tbody>
           {reports.map((report) => {
             const href = workspaceReportPath(workspaceSlug, report.slug);
+            const topics = topicLines(report);
             return (
               <tr key={report.slug}>
                 <td>
@@ -60,7 +62,15 @@ export function ReportList({ workspaceSlug, reports }: ReportListProps) {
                   <Link href={href}>{cell(report.author)}</Link>
                 </td>
                 <td className="topic-cell">
-                  <Link href={href}>{topicSummary(report)}</Link>
+                  <Link href={href}>
+                    {topics.length === 0
+                      ? "-"
+                      : topics.map((line) => (
+                          <span key={line.id} className="topic-line">
+                            {line.text}
+                          </span>
+                        ))}
+                  </Link>
                 </td>
                 <td>
                   <Link href={href}>
