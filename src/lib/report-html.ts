@@ -72,6 +72,10 @@ function rowInline(label: string, valueHtml: string) {
   return `<li style="${styles.li}"><strong style="${styles.strong}">${label}</strong>: ${valueHtml}</li>`;
 }
 
+function rowStacked(label: string, valueHtml: string) {
+  return `<li style="${styles.li}"><strong style="${styles.strong}">${label}</strong><div style="margin-top:4px;">${valueHtml}</div></li>`;
+}
+
 function multilineValue(value: string) {
   const trimmed = value.trim();
   if (!trimmed) return "-";
@@ -127,7 +131,7 @@ export function reportToHtml(report: ReportInput) {
           item.attendees.filter(Boolean).map(escapeHtml).join(", ") || "-",
         ),
         rowInline("활동 주제", textOrDash(item.topic)),
-        rowInline("스터디 내용", multilineValue(item.study_content)),
+        rowStacked("스터디 내용", multilineValue(item.study_content)),
         `</ul>`,
         `<h3 style="${styles.subhead}">결과물</h3>`,
         multilineInline(item.deliverables),

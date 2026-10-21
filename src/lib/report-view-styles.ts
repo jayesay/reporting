@@ -128,6 +128,12 @@ export const REPORT_VIEW_CSS = `
   border: none;
   border-radius: 0;
 }
+.view-html-root .info-stacked {
+  display: block;
+}
+.view-html-root .info-stacked-body {
+  margin-top: 4px;
+}
 .view-html-root .text-block h3 {
   margin: 18px 0 8px;
 }

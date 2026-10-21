@@ -40,6 +40,7 @@ type ReportViewProps = {
 type InfoRow = {
   label: string;
   value: string;
+  stacked?: boolean;
 };
 
 function photoStorageKey(slug: string) {
@@ -88,11 +89,20 @@ function InfoList({ rows }: { rows: InfoRow[] }) {
   if (visible.length === 0) return null;
   return (
     <ul>
-      {visible.map((row) => (
-        <li key={row.label}>
-          <strong>{row.label}</strong>: <InfoValue value={row.value} />
-        </li>
-      ))}
+      {visible.map((row) =>
+        row.stacked ? (
+          <li key={row.label} className="info-stacked">
+            <strong>{row.label}</strong>
+            <div className="info-stacked-body">
+              <InfoValue value={row.value} />
+            </div>
+          </li>
+        ) : (
+          <li key={row.label}>
+            <strong>{row.label}</strong>: <InfoValue value={row.value} />
+          </li>
+        ),
+      )}
     </ul>
   );
 }
@@ -282,7 +292,11 @@ export function ReportView({
                         value: item.attendees.filter(Boolean).join(", "),
                       },
                       { label: "활동 주제", value: item.topic },
-                      { label: "스터디 내용", value: item.study_content },
+                      {
+                        label: "스터디 내용",
+                        value: item.study_content,
+                        stacked: true,
+                      },
                     ]}
                   />
                   <TextBlock title="결과물" value={item.deliverables} />

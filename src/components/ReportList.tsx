@@ -1,9 +1,7 @@
 import Link from "next/link";
 import type { ReportListItem } from "@/app/actions/reports";
 import { formatSeoulDateTime } from "@/lib/format-datetime";
-import { formatSessionListSummary } from "@/lib/report-format";
 import { workspaceReportPath } from "@/lib/paths";
-import { journalHasContent } from "@/lib/types/report";
 
 type ReportListProps = {
   workspaceSlug: string;
@@ -20,20 +18,6 @@ function formatMonth(value: string) {
 function cell(value: string, fallback = "-") {
   const text = value.trim();
   return text || fallback;
-}
-
-function sessionSummary(report: ReportListItem) {
-  const parts = report.journals
-    .filter(journalHasContent)
-    .map((item) =>
-      formatSessionListSummary(
-        item.session_no,
-        item.meeting_start,
-        item.meeting_end,
-      ),
-    )
-    .filter((value) => value !== "-");
-  return parts.length > 0 ? parts.join(" · ") : "-";
 }
 
 function topicSummary(report: ReportListItem) {
@@ -58,7 +42,6 @@ export function ReportList({ workspaceSlug, reports }: ReportListProps) {
         <thead>
           <tr>
             <th>보고 월</th>
-            <th>회차·날짜</th>
             <th>작성자</th>
             <th>활동 주제</th>
             <th>상태</th>
@@ -72,9 +55,6 @@ export function ReportList({ workspaceSlug, reports }: ReportListProps) {
               <tr key={report.slug}>
                 <td>
                   <Link href={href}>{formatMonth(report.report_month)}</Link>
-                </td>
-                <td className="session-cell">
-                  <Link href={href}>{sessionSummary(report)}</Link>
                 </td>
                 <td>
                   <Link href={href}>{cell(report.author)}</Link>
@@ -91,8 +71,8 @@ export function ReportList({ workspaceSlug, reports }: ReportListProps) {
                     </span>
                   </Link>
                 </td>
-                <td>
-                  <Link href={href}>
+                <td className="updated-cell min-w-[13.5rem]">
+                  <Link href={href} className="!overflow-visible whitespace-nowrap">
                     <time dateTime={report.updated_at}>
                       {formatSeoulDateTime(report.updated_at)}
                     </time>
