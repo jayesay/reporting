@@ -12,6 +12,10 @@ export function workspaceNewReportPath(workspaceSlug: string) {
   return `/w/${workspaceSlug}/r/new`;
 }
 
+export function workspaceExpensesPath(workspaceSlug: string) {
+  return `/w/${workspaceSlug}/expenses`;
+}
+
 export function workspaceReportPath(workspaceSlug: string, reportSlug: string) {
   return `/w/${workspaceSlug}/r/${reportSlug}`;
 }
