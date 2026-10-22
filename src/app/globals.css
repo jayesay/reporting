@@ -862,6 +862,11 @@ a {
 .deliverable-thumb {
   position: relative;
   margin: 0;
+  width: 100%;
+}
+
+.deliverable-thumb.is-portrait {
+  width: 50%;
 }
 
 .deliverable-thumb img {

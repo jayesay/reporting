@@ -172,7 +172,11 @@ export const REPORT_VIEW_CSS = `
 }
 .view-html-root .deliverable-grid li {
   margin: 0;
+  width: 100%;
   list-style: none;
+}
+.view-html-root .deliverable-grid li.is-portrait {
+  width: 50%;
 }
 .view-html-root .deliverable-grid img {
   display: block;
@@ -278,6 +282,9 @@ export const REPORT_VIEW_CSS = `
   position: relative;
   list-style: none;
   width: 100%;
+}
+.view-html-root .photo-item.is-portrait {
+  width: 50%;
 }
 .view-html-root .photo-item img {
   display: block;

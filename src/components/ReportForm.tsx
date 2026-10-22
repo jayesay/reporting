@@ -9,6 +9,7 @@ import {
   deleteReport,
   saveReport,
 } from "@/app/actions/reports";
+import { OrientedImage } from "@/components/OrientedImage";
 import { ScrollToTopButton } from "@/components/ScrollToTopButton";
 import { formatSeoulDateTime } from "@/lib/format-datetime";
 import {
@@ -225,7 +226,10 @@ function DeliverableImagesField({
         <ul className="deliverable-thumbs">
           {images.map((image) => (
             <li key={image.id} className="deliverable-thumb">
-              <img src={image.dataUrl} alt={image.name || "결과물 이미지"} />
+              <OrientedImage
+                src={image.dataUrl}
+                alt={image.name || "결과물 이미지"}
+              />
               <button
                 type="button"
                 className="deliverable-thumb-remove"

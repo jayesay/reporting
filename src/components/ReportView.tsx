@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { OrientedImage } from "@/components/OrientedImage";
 import { compressImageForLocalStorage } from "@/lib/compress-image";
 import {
   filledLines,
@@ -113,7 +114,7 @@ function InfoList({ rows }: { rows: InfoRow[] }) {
                 <ul className="deliverable-grid">
                   {images.map((image) => (
                     <li key={image.id}>
-                      <img
+                      <OrientedImage
                         src={image.dataUrl}
                         alt={image.name || "결과물 이미지"}
                       />
@@ -341,7 +342,7 @@ export function ReportView({
                         <ul className="deliverable-grid">
                           {item.deliverable_images.map((image) => (
                             <li key={image.id}>
-                              <img
+                              <OrientedImage
                                 src={image.dataUrl}
                                 alt={image.name || "결과물 이미지"}
                               />
@@ -372,7 +373,7 @@ export function ReportView({
                         <ul className="photo-grid">
                           {photos.map((photo) => (
                             <li key={photo.id} className="photo-item">
-                              <img src={photo.dataUrl} alt="" />
+                              <OrientedImage src={photo.dataUrl} alt="" />
                               <button
                                 type="button"
                                 className="photo-remove no-print"
