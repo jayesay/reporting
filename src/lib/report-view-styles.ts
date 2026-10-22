@@ -175,8 +175,11 @@ export const REPORT_VIEW_CSS = `
   width: 100%;
   list-style: none;
 }
+.view-html-root .deliverable-grid li:has(img.is-portrait),
 .view-html-root .deliverable-grid li.is-portrait {
   width: 50%;
+  max-width: 50%;
+  align-self: flex-start;
 }
 .view-html-root .deliverable-grid img {
   display: block;
@@ -197,42 +200,6 @@ export const REPORT_VIEW_CSS = `
 .view-html-root .ai-card p:last-child {
   margin-bottom: 0;
 }
-.view-html-root .photo-file {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-.view-html-root .photo-dropzone {
-  display: block;
-  width: 100%;
-  margin: 0;
-  padding: 36px 16px;
-  border: 1px dashed var(--line);
-  border-radius: 10px;
-  background: var(--paper);
-  color: var(--muted);
-  text-align: center;
-  font: inherit;
-  font-size: 14px;
-  line-height: 1.6;
-  cursor: pointer;
-}
-.view-html-root .photo-dropzone:hover,
-.view-html-root .photo-dropzone:focus-visible {
-  border-color: var(--teal);
-  color: var(--teal-deep);
-}
-.view-html-root .photo-dropzone span {
-  display: block;
-  margin-top: 6px;
-  font-size: 12px;
-}
 .view-html-root .photo-block {
   margin-top: 12px;
 }
@@ -240,31 +207,6 @@ export const REPORT_VIEW_CSS = `
   margin: 0;
   padding: 0;
   width: 100%;
-}
-.view-html-root .photo-add {
-  display: block;
-  width: 100%;
-  margin: 12px 0 0;
-  padding: 12px 16px;
-  border: 1px dashed var(--line);
-  border-radius: 10px;
-  background: var(--paper);
-  color: var(--muted);
-  text-align: center;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.view-html-root .photo-add:hover,
-.view-html-root .photo-add:focus-visible {
-  border-color: var(--teal);
-  color: var(--teal-deep);
-}
-.view-html-root .photo-help {
-  margin: 10px 0 0;
-  color: var(--muted);
-  font-size: 13px;
 }
 .view-html-root .photo-grid {
   display: flex;
@@ -283,8 +225,11 @@ export const REPORT_VIEW_CSS = `
   list-style: none;
   width: 100%;
 }
+.view-html-root .photo-item:has(img.is-portrait),
 .view-html-root .photo-item.is-portrait {
   width: 50%;
+  max-width: 50%;
+  align-self: flex-start;
 }
 .view-html-root .photo-item img {
   display: block;
@@ -294,35 +239,6 @@ export const REPORT_VIEW_CSS = `
   border: 1px solid var(--line);
   border-radius: 10px;
   object-fit: contain;
-}
-.view-html-root .photo-remove {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  margin: 0;
-  border: 1px solid rgba(180, 35, 24, 0.25);
-  border-radius: 8px;
-  padding: 6px 10px;
-  background: rgba(255, 255, 255, 0.94);
-  color: #b42318;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 700;
-  cursor: pointer;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.15s ease;
-}
-.view-html-root .photo-item:hover .photo-remove,
-.view-html-root .photo-item:focus-within .photo-remove {
-  opacity: 1;
-  pointer-events: auto;
-}
-@media (hover: none) {
-  .view-html-root .photo-item .photo-remove {
-    opacity: 1;
-    pointer-events: auto;
-  }
 }
 .view-html-root .view-topbar {
   width: min(860px, 100%);

@@ -1,22 +1,5 @@
-const ORIENTATION_FRAME_SELECTOR =
-  ".photo-item, .deliverable-thumb, .deliverable-grid li";
-
 export function isPortraitSize(width: number, height: number) {
   return height > width;
-}
-
-export function applyOrientedImageClass(image: HTMLImageElement | null) {
-  if (!image) return;
-  const width = image.naturalWidth;
-  const height = image.naturalHeight;
-  if (!width || !height) return;
-
-  const portrait = isPortraitSize(width, height);
-  image.classList.toggle("is-portrait", portrait);
-  image.closest(ORIENTATION_FRAME_SELECTOR)?.classList.toggle(
-    "is-portrait",
-    portrait,
-  );
 }
 
 function readU16(bytes: Uint8Array, offset: number, littleEndian = false) {

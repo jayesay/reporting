@@ -9,6 +9,7 @@ import {
   deleteReport,
   saveReport,
 } from "@/app/actions/reports";
+import { JournalPhotosField } from "@/components/JournalPhotosField";
 import { OrientedImage } from "@/components/OrientedImage";
 import { ScrollToTopButton } from "@/components/ScrollToTopButton";
 import { formatSeoulDateTime } from "@/lib/format-datetime";
@@ -22,6 +23,13 @@ import {
   joinMeetingDateTime,
   splitMeetingFields,
 } from "@/lib/report-format";
+import {
+  clearPhotosByJournal,
+  loadPhotosByJournal,
+  savePhotosByJournal,
+  type LocalPhoto,
+  type PhotosByJournal,
+} from "@/lib/view-photos";
 import {
   createEmptyAiService,
   createEmptyJournal,
@@ -263,12 +271,16 @@ function DeliverableImagesField({
 function JournalCard({
   item,
   canDelete,
+  photos,
   onChange,
+  onChangePhotos,
   onDelete,
 }: {
   item: JournalEntry;
   canDelete: boolean;
+  photos: LocalPhoto[];
   onChange: (next: Partial<JournalEntry>) => void;
+  onChangePhotos: (next: LocalPhoto[]) => void;
   onDelete: () => void;
 }) {
   const { date, startTime, endTime } = splitMeetingFields(
@@ -383,13 +395,7 @@ function JournalCard({
           }
         />
       </div>
-      <div className="field">
-        <label>사진</label>
-        <div className="photo-placeholder">
-          <p>사진은 조회 페이지에서 이 회차별로 추가합니다.</p>
-          <p>저장 후 조회하기에서 해당 활동일지의 사진 영역을 클릭하세요.</p>
-        </div>
-      </div>
+      <JournalPhotosField photos={photos} onChange={onChangePhotos} />
     </div>
   );
 }
@@ -436,6 +442,9 @@ export function ReportForm({
   const [form, setForm] = useState<ReportInput>(() =>
     toInput(report, workspaceName, defaultAttendees),
   );
+  const [photosByJournal, setPhotosByJournal] = useState<PhotosByJournal>({});
+  const [photosReady, setPhotosReady] = useState(!report?.slug);
+  const [photoSaveError, setPhotoSaveError] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [saveError, setSaveError] = useState<string | null>(null);
   const [updatedAt, setUpdatedAt] = useState(report?.updated_at ?? "");
@@ -444,8 +453,10 @@ export function ReportForm({
   const creatingRef = useRef(false);
   const slugRef = useRef(slug);
   const formRef = useRef(form);
+  const photosRef = useRef(photosByJournal);
   slugRef.current = slug;
   formRef.current = form;
+  photosRef.current = photosByJournal;
 
   useEffect(() => {
     if (report) return;
@@ -473,6 +484,31 @@ export function ReportForm({
     // 새 보고서 첫 로드에서만 로컬 팀원 보정
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [report, workspaceSlug]);
+
+  useEffect(() => {
+    if (!slug) {
+      setPhotosReady(true);
+      return;
+    }
+    setPhotosByJournal((prev) => {
+      const hasLocal = Object.values(prev).some((list) => list.length > 0);
+      if (hasLocal) return prev;
+      return loadPhotosByJournal(slug, formRef.current.journals[0]?.id);
+    });
+    setPhotosReady(true);
+  }, [slug]);
+
+  useEffect(() => {
+    if (!photosReady || !slug) return;
+    try {
+      savePhotosByJournal(slug, photosByJournal);
+      setPhotoSaveError(null);
+    } catch {
+      setPhotoSaveError(
+        "사진 로컬 저장 공간이 부족합니다. 일부 사진을 제거해 주세요.",
+      );
+    }
+  }, [photosByJournal, photosReady, slug]);
 
   function setFormValue(updater: (prev: ReportInput) => ReportInput) {
     setForm((prev) => {
@@ -546,6 +582,13 @@ export function ReportForm({
       }
 
       storeAttendees(workspaceSlug, payload.attendees);
+      try {
+        savePhotosByJournal(result.slug, photosRef.current);
+      } catch {
+        setPhotoSaveError(
+          "사진 로컬 저장 공간이 부족합니다. 일부 사진을 제거해 주세요.",
+        );
+      }
       setSlug(result.slug);
       slugRef.current = result.slug;
       setUpdatedAt(result.updatedAt);
@@ -587,6 +630,7 @@ export function ReportForm({
         setSaveError(result.error);
         return;
       }
+      clearPhotosByJournal(slug);
       router.push(homePath);
       router.refresh();
     });
@@ -743,15 +787,30 @@ export function ReportForm({
                 key={item.id}
                 item={item}
                 canDelete={form.journals.length > 1}
+                photos={photosByJournal[item.id] ?? []}
                 onChange={(next) => patchJournal(item.id, next)}
-                onDelete={() =>
+                onChangePhotos={(photos) =>
+                  setPhotosByJournal((prev) => ({
+                    ...prev,
+                    [item.id]: photos,
+                  }))
+                }
+                onDelete={() => {
                   setFormValue((prev) => ({
                     ...prev,
                     journals: prev.journals.filter((row) => row.id !== item.id),
-                  }))
-                }
+                  }));
+                  setPhotosByJournal((prev) => {
+                    const next = { ...prev };
+                    delete next[item.id];
+                    return next;
+                  });
+                }}
               />
             ))}
+            {photoSaveError ? (
+              <p className="error-text">{photoSaveError}</p>
+            ) : null}
           </div>
         </section>
 

@@ -865,8 +865,11 @@ a {
   width: 100%;
 }
 
+.deliverable-thumb:has(img.is-portrait),
 .deliverable-thumb.is-portrait {
   width: 50%;
+  max-width: 50%;
+  align-self: flex-start;
 }
 
 .deliverable-thumb img {

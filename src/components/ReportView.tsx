@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import { OrientedImage } from "@/components/OrientedImage";
-import { compressImageForLocalStorage } from "@/lib/compress-image";
 import {
   filledLines,
   formatDate,
@@ -20,17 +19,13 @@ import {
   type Report,
 } from "@/lib/types/report";
 import {
+  loadPhotosByJournal,
+  type PhotosByJournal,
+} from "@/lib/view-photos";
+import {
   themeCssVars,
   type WorkspaceThemeId,
 } from "@/lib/workspace-theme";
-
-type LocalPhoto = {
-  id: string;
-  name: string;
-  dataUrl: string;
-};
-
-type PhotosByJournal = Record<string, LocalPhoto[]>;
 
 type ReportViewProps = {
   workspaceSlug: string;
@@ -45,26 +40,6 @@ type InfoRow = {
   stacked?: boolean;
   images?: DeliverableImage[];
 };
-
-function photoStorageKey(slug: string) {
-  return `innosight-view-photos:${slug}`;
-}
-
-function readPhotoStore(raw: string, fallbackJournalId?: string): PhotosByJournal {
-  const parsed = JSON.parse(raw) as unknown;
-  if (Array.isArray(parsed)) {
-    if (!fallbackJournalId || parsed.length === 0) return {};
-    return { [fallbackJournalId]: parsed as LocalPhoto[] };
-  }
-  if (parsed && typeof parsed === "object") {
-    const next: PhotosByJournal = {};
-    for (const [key, value] of Object.entries(parsed as Record<string, unknown>)) {
-      if (Array.isArray(value)) next[key] = value as LocalPhoto[];
-    }
-    return next;
-  }
-  return {};
-}
 
 function filledAiServices(items: AiServiceEntry[]) {
   return items.filter(
@@ -157,10 +132,6 @@ export function ReportView({
   report,
 }: ReportViewProps) {
   const [photosByJournal, setPhotosByJournal] = useState<PhotosByJournal>({});
-  const [photoError, setPhotoError] = useState<string | null>(null);
-  const [ready, setReady] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const targetJournalId = useRef<string | null>(null);
 
   const teamName = (workspaceName || report.team_name).trim();
   const attendees = report.attendees.filter(Boolean).join(", ");
@@ -175,78 +146,10 @@ export function ReportView({
   const aiItems = filledAiServices(report.ai_services);
 
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(photoStorageKey(report.slug));
-      if (raw) {
-        const firstId =
-          report.journals.find(journalHasContent)?.id ??
-          report.journals[0]?.id;
-        setPhotosByJournal(readPhotoStore(raw, firstId));
-      }
-    } catch {
-      // ignore
-    } finally {
-      setReady(true);
-    }
+    const firstId =
+      report.journals.find(journalHasContent)?.id ?? report.journals[0]?.id;
+    setPhotosByJournal(loadPhotosByJournal(report.slug, firstId));
   }, [report.journals, report.slug]);
-
-  useEffect(() => {
-    if (!ready) return;
-    try {
-      window.localStorage.setItem(
-        photoStorageKey(report.slug),
-        JSON.stringify(photosByJournal),
-      );
-    } catch {
-      setPhotoError("사진 로컬 저장 공간이 부족합니다. 일부 사진을 제거해 주세요.");
-    }
-  }, [photosByJournal, ready, report.slug]);
-
-  async function handlePhotoSelect(files: FileList | null) {
-    const journalId = targetJournalId.current;
-    if (!files || files.length === 0 || !journalId) return;
-    setPhotoError(null);
-
-    try {
-      const next: LocalPhoto[] = [];
-      for (const file of Array.from(files)) {
-        if (!file.type.startsWith("image/")) continue;
-        const dataUrl = await compressImageForLocalStorage(file);
-        next.push({
-          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          name: file.name,
-          dataUrl,
-        });
-      }
-      if (next.length === 0) {
-        setPhotoError("이미지 파일만 추가할 수 있습니다.");
-        return;
-      }
-      setPhotosByJournal((prev) => ({
-        ...prev,
-        [journalId]: [...(prev[journalId] ?? []), ...next],
-      }));
-    } catch (error) {
-      setPhotoError(
-        error instanceof Error ? error.message : "사진 추가에 실패했습니다.",
-      );
-    } finally {
-      if (inputRef.current) inputRef.current.value = "";
-      targetJournalId.current = null;
-    }
-  }
-
-  function openPhotoPicker(journalId: string) {
-    targetJournalId.current = journalId;
-    inputRef.current?.click();
-  }
-
-  function removePhoto(journalId: string, photoId: string) {
-    setPhotosByJournal((prev) => ({
-      ...prev,
-      [journalId]: (prev[journalId] ?? []).filter((item) => item.id !== photoId),
-    }));
-  }
 
   const hasTeamInfo = teamRows.some((row) => hasText(row.value) && row.value !== "-");
   const hasResults =
@@ -290,16 +193,6 @@ export function ReportView({
         {filledJournals.length > 0 ? (
           <section>
             <h2>활동일지</h2>
-            <input
-              ref={inputRef}
-              className="photo-file"
-              type="file"
-              accept="image/*"
-              multiple
-              onChange={(event) => {
-                void handlePhotoSelect(event.target.files);
-              }}
-            />
             {filledJournals.map((item) => {
               const photos = photosByJournal[item.id] ?? [];
               return (
@@ -352,56 +245,23 @@ export function ReportView({
                       ) : null}
                     </div>
                   ) : null}
-                  <div
-                    className={
-                      photos.length === 0
-                        ? "photo-block no-print"
-                        : "photo-block"
-                    }
-                  >
-                    {photos.length === 0 ? (
-                      <button
-                        type="button"
-                        className="photo-dropzone no-print"
-                        onClick={() => openPhotoPicker(item.id)}
-                      >
-                        클릭해서 이 회차 사진을 추가하세요
-                        <span>이 브라우저에만 로컬 저장됩니다. 추가 시 자동으로 용량을 줄입니다.</span>
-                      </button>
-                    ) : (
-                      <>
-                        <ul className="photo-grid">
-                          {photos.map((photo) => (
-                            <li key={photo.id} className="photo-item">
-                              <OrientedImage src={photo.dataUrl} alt="" />
-                              <button
-                                type="button"
-                                className="photo-remove no-print"
-                                onClick={() => removePhoto(item.id, photo.id)}
-                              >
-                                삭제
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                        <button
-                          type="button"
-                          className="photo-add no-print"
-                          onClick={() => openPhotoPicker(item.id)}
-                        >
-                          사진 추가
-                        </button>
-                      </>
-                    )}
-                  </div>
+                  {photos.length > 0 ? (
+                    <div className="photo-block">
+                      <ul className="photo-grid">
+                        {photos.map((photo) => (
+                          <li key={photo.id} className="photo-item">
+                            <OrientedImage
+                              src={photo.dataUrl}
+                              alt={photo.name || "사진"}
+                            />
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null}
                 </div>
               );
             })}
-            {photoError ? (
-              <p className="photo-help" style={{ color: "#b42318" }}>
-                {photoError}
-              </p>
-            ) : null}
           </section>
         ) : null}
 
