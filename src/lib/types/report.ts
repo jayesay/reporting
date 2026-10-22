@@ -65,14 +65,26 @@ export const MAX_NEXT_PLAN_COUNT = 2;
 /** 항목당 결과물 이미지 업로드 원본 합계. 저장 시 압축하므로 압축 후 용량보다 크게 둔다. */
 export const MAX_DELIVERABLE_IMAGE_BYTES = 10 * 1024 * 1024;
 
-let aiServiceSeq = 0;
-let journalSeq = 0;
-let nextPlanSeq = 0;
+function createEntryId(prefix: string) {
+  return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function withUniqueIds<T extends { id: string }>(items: T[], prefix: string) {
+  const seen = new Set<string>();
+  return items.map((item) => {
+    if (!item.id || seen.has(item.id)) {
+      const id = createEntryId(prefix);
+      seen.add(id);
+      return { ...item, id };
+    }
+    seen.add(item.id);
+    return item;
+  });
+}
 
 export function createEmptyAiService(): AiServiceEntry {
-  aiServiceSeq += 1;
   return {
-    id: `ai-${aiServiceSeq}`,
+    id: createEntryId("ai"),
     serviceName: "",
     users: "",
     usage: "",
@@ -85,7 +97,7 @@ export function normalizeAiService(value: unknown): AiServiceEntry {
   const row =
     value && typeof value === "object" ? (value as Record<string, unknown>) : {};
   return {
-    id: asText(row.id) || createEmptyAiService().id,
+    id: asText(row.id) || createEntryId("ai"),
     serviceName: asText(row.serviceName),
     users: asText(row.users),
     usage: asText(row.usage),
@@ -96,7 +108,7 @@ export function normalizeAiService(value: unknown): AiServiceEntry {
 
 export function normalizeAiServices(value: unknown): AiServiceEntry[] {
   const list = Array.isArray(value) ? value.map(normalizeAiService) : [];
-  return list.length > 0 ? list : [createEmptyAiService()];
+  return list.length > 0 ? withUniqueIds(list, "ai") : [createEmptyAiService()];
 }
 
 export function normalizeNameList(value: unknown): string[] {
@@ -108,9 +120,8 @@ export function normalizeNameList(value: unknown): string[] {
 }
 
 export function createEmptyJournal(teamMembers: string[] = []): JournalEntry {
-  journalSeq += 1;
   return {
-    id: `journal-${journalSeq}`,
+    id: createEntryId("journal"),
     session_no: null,
     meeting_start: "",
     meeting_end: "",
@@ -124,9 +135,8 @@ export function createEmptyJournal(teamMembers: string[] = []): JournalEntry {
 }
 
 export function createEmptyNextPlan(): NextPlanEntry {
-  nextPlanSeq += 1;
   return {
-    id: `plan-${nextPlanSeq}`,
+    id: createEntryId("plan"),
     meeting_date: "",
     topic: "",
     goals: "",
@@ -210,7 +220,7 @@ export function normalizeJournal(
   const hasOwnAttendees =
     value && typeof value === "object" && "attendees" in row;
   return {
-    id: asText(row.id) || createEmptyJournal().id,
+    id: asText(row.id) || createEntryId("journal"),
     session_no: normalizeSessionNo(row.session_no),
     meeting_start: asText(row.meeting_start),
     meeting_end: asText(row.meeting_end),
@@ -229,7 +239,7 @@ export function normalizeNextPlan(value: unknown): NextPlanEntry {
   const row =
     value && typeof value === "object" ? (value as Record<string, unknown>) : {};
   return {
-    id: asText(row.id) || createEmptyNextPlan().id,
+    id: asText(row.id) || createEntryId("plan"),
     meeting_date: asText(row.meeting_date),
     topic: asText(row.topic),
     goals: asText(row.goals),
@@ -292,7 +302,10 @@ export function normalizeJournals(
 ): JournalEntry[] {
   const members = normalizeNameList(teamMembers);
   const list = Array.isArray(value)
-    ? value.map((item) => normalizeJournal(item, members))
+    ? withUniqueIds(
+        value.map((item) => normalizeJournal(item, members)),
+        "journal",
+      )
     : [];
   if (list.length > 0) return list.slice(0, MAX_JOURNAL_COUNT);
   if (legacy && journalHasContent(fallbackJournal(legacy, members))) {
@@ -305,7 +318,9 @@ export function normalizeNextPlans(
   value: unknown,
   legacy?: { next_meeting_date?: unknown; next_topic?: unknown; next_goals?: unknown },
 ): NextPlanEntry[] {
-  const list = Array.isArray(value) ? value.map(normalizeNextPlan) : [];
+  const list = Array.isArray(value)
+    ? withUniqueIds(value.map(normalizeNextPlan), "plan")
+    : [];
   if (list.length > 0) return list.slice(0, MAX_NEXT_PLAN_COUNT);
   if (legacy) {
     const plan: NextPlanEntry = {

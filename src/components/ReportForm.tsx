@@ -35,6 +35,7 @@ import {
   normalizeJournals,
   normalizeNextPlans,
   normalizeSessionNo,
+  type AiServiceEntry,
   type DeliverableImage,
   type JournalEntry,
   type NextPlanEntry,
@@ -263,7 +264,7 @@ function JournalCard({
 }: {
   item: JournalEntry;
   canDelete: boolean;
-  onChange: (next: JournalEntry) => void;
+  onChange: (next: Partial<JournalEntry>) => void;
   onDelete: () => void;
 }) {
   const { date, startTime, endTime } = splitMeetingFields(
@@ -273,7 +274,6 @@ function JournalCard({
 
   function updateMeeting(nextDate: string, nextStart: string, nextEnd: string) {
     onChange({
-      ...item,
       meeting_start: joinMeetingDateTime(nextDate, nextStart),
       meeting_end: joinMeetingDateTime(nextDate, nextEnd),
     });
@@ -301,7 +301,6 @@ function JournalCard({
             value={item.session_no ?? ""}
             onChange={(e) =>
               onChange({
-                ...item,
                 session_no: normalizeSessionNo(e.target.value),
               })
             }
@@ -337,14 +336,14 @@ function JournalCard({
           <label>장소</label>
           <input
             value={item.location}
-            onChange={(e) => onChange({ ...item, location: e.target.value })}
+            onChange={(e) => onChange({ location: e.target.value })}
           />
         </div>
         <div className="field">
           <label>활동 주제</label>
           <input
             value={item.topic}
-            onChange={(e) => onChange({ ...item, topic: e.target.value })}
+            onChange={(e) => onChange({ topic: e.target.value })}
           />
         </div>
       </div>
@@ -352,7 +351,7 @@ function JournalCard({
         label="참석자"
         hint="이 모임에 참석한 사람만 남기거나 추가할 수 있습니다."
         values={item.attendees}
-        onChange={(values) => onChange({ ...item, attendees: values })}
+        onChange={(values) => onChange({ attendees: values })}
       />
       <div className="field">
         <label>스터디 내용</label>
@@ -360,7 +359,7 @@ function JournalCard({
           rows={6}
           value={item.study_content}
           onChange={(e) =>
-            onChange({ ...item, study_content: e.target.value })
+            onChange({ study_content: e.target.value })
           }
         />
       </div>
@@ -370,13 +369,13 @@ function JournalCard({
           rows={4}
           value={item.deliverables}
           onChange={(e) =>
-            onChange({ ...item, deliverables: e.target.value })
+            onChange({ deliverables: e.target.value })
           }
         />
         <DeliverableImagesField
           images={item.deliverable_images ?? []}
           onChange={(deliverable_images) =>
-            onChange({ ...item, deliverable_images })
+            onChange({ deliverable_images })
           }
         />
       </div>
@@ -471,6 +470,14 @@ export function ReportForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [report, workspaceSlug]);
 
+  function setFormValue(updater: (prev: ReportInput) => ReportInput) {
+    setForm((prev) => {
+      const next = { ...updater(prev), team_name: workspaceName };
+      formRef.current = next;
+      return next;
+    });
+  }
+
   function patch<K extends keyof ReportInput>(key: K, value: ReportInput[K]) {
     if (key === "attendees") {
       const attendees = (Array.isArray(value) ? value : []).filter(
@@ -479,25 +486,37 @@ export function ReportForm({
       storeAttendees(workspaceSlug, attendees);
     }
 
-    setForm((prev) => ({
+    setFormValue((prev) => ({
       ...prev,
       [key]: value,
-      team_name: workspaceName,
     }));
   }
 
-  function patchJournal(id: string, next: JournalEntry) {
-    patch(
-      "journals",
-      form.journals.map((row) => (row.id === id ? next : row)),
-    );
+  function patchJournal(id: string, next: Partial<JournalEntry>) {
+    setFormValue((prev) => ({
+      ...prev,
+      journals: prev.journals.map((row) =>
+        row.id === id ? { ...row, ...next } : row,
+      ),
+    }));
   }
 
-  function patchPlan(id: string, next: NextPlanEntry) {
-    patch(
-      "next_plans",
-      form.next_plans.map((row) => (row.id === id ? next : row)),
-    );
+  function patchPlan(id: string, next: Partial<NextPlanEntry>) {
+    setFormValue((prev) => ({
+      ...prev,
+      next_plans: prev.next_plans.map((row) =>
+        row.id === id ? { ...row, ...next } : row,
+      ),
+    }));
+  }
+
+  function patchAiService(id: string, next: Partial<AiServiceEntry>) {
+    setFormValue((prev) => ({
+      ...prev,
+      ai_services: prev.ai_services.map((row) =>
+        row.id === id ? { ...row, ...next } : row,
+      ),
+    }));
   }
 
   async function persist(next: ReportInput = formRef.current) {
@@ -701,10 +720,13 @@ export function ReportForm({
               type="button"
               className="btn ghost"
               onClick={() =>
-                patch("journals", [
-                  ...form.journals,
-                  createEmptyJournal(form.attendees),
-                ])
+                setFormValue((prev) => ({
+                  ...prev,
+                  journals: [
+                    ...prev.journals,
+                    createEmptyJournal(prev.attendees),
+                  ],
+                }))
               }
               disabled={form.journals.length >= MAX_JOURNAL_COUNT}
             >
@@ -719,10 +741,10 @@ export function ReportForm({
                 canDelete={form.journals.length > 1}
                 onChange={(next) => patchJournal(item.id, next)}
                 onDelete={() =>
-                  patch(
-                    "journals",
-                    form.journals.filter((row) => row.id !== item.id),
-                  )
+                  setFormValue((prev) => ({
+                    ...prev,
+                    journals: prev.journals.filter((row) => row.id !== item.id),
+                  }))
                 }
               />
             ))}
@@ -767,7 +789,10 @@ export function ReportForm({
               type="button"
               className="btn ghost"
               onClick={() =>
-                patch("ai_services", [...form.ai_services, createEmptyAiService()])
+                setFormValue((prev) => ({
+                  ...prev,
+                  ai_services: [...prev.ai_services, createEmptyAiService()],
+                }))
               }
             >
               추가
@@ -780,10 +805,12 @@ export function ReportForm({
                   type="button"
                   className="btn ghost danger compact absolute top-2 right-2 z-10"
                   onClick={() =>
-                    patch(
-                      "ai_services",
-                      form.ai_services.filter((row) => row.id !== item.id),
-                    )
+                    setFormValue((prev) => ({
+                      ...prev,
+                      ai_services: prev.ai_services.filter(
+                        (row) => row.id !== item.id,
+                      ),
+                    }))
                   }
                   disabled={form.ai_services.length === 1}
                 >
@@ -795,14 +822,7 @@ export function ReportForm({
                     <input
                       value={item.users}
                       onChange={(e) =>
-                        patch(
-                          "ai_services",
-                          form.ai_services.map((row) =>
-                            row.id === item.id
-                              ? { ...row, users: e.target.value }
-                              : row,
-                          ),
-                        )
+                        patchAiService(item.id, { users: e.target.value })
                       }
                     />
                   </div>
@@ -811,14 +831,9 @@ export function ReportForm({
                     <input
                       value={item.serviceName}
                       onChange={(e) =>
-                        patch(
-                          "ai_services",
-                          form.ai_services.map((row) =>
-                            row.id === item.id
-                              ? { ...row, serviceName: e.target.value }
-                              : row,
-                          ),
-                        )
+                        patchAiService(item.id, {
+                          serviceName: e.target.value,
+                        })
                       }
                     />
                   </div>
@@ -829,25 +844,13 @@ export function ReportForm({
                     rows={3}
                     value={item.usage}
                     onChange={(e) =>
-                      patch(
-                        "ai_services",
-                        form.ai_services.map((row) =>
-                          row.id === item.id
-                            ? { ...row, usage: e.target.value }
-                            : row,
-                        ),
-                      )
+                      patchAiService(item.id, { usage: e.target.value })
                     }
                   />
                   <DeliverableImagesField
                     images={item.usage_images ?? []}
                     onChange={(usage_images) =>
-                      patch(
-                        "ai_services",
-                        form.ai_services.map((row) =>
-                          row.id === item.id ? { ...row, usage_images } : row,
-                        ),
-                      )
+                      patchAiService(item.id, { usage_images })
                     }
                   />
                 </div>
@@ -857,14 +860,7 @@ export function ReportForm({
                     rows={3}
                     value={item.relevance}
                     onChange={(e) =>
-                      patch(
-                        "ai_services",
-                        form.ai_services.map((row) =>
-                          row.id === item.id
-                            ? { ...row, relevance: e.target.value }
-                            : row,
-                        ),
-                      )
+                      patchAiService(item.id, { relevance: e.target.value })
                     }
                   />
                 </div>
@@ -880,7 +876,10 @@ export function ReportForm({
               type="button"
               className="btn ghost"
               onClick={() =>
-                patch("next_plans", [...form.next_plans, createEmptyNextPlan()])
+                setFormValue((prev) => ({
+                  ...prev,
+                  next_plans: [...prev.next_plans, createEmptyNextPlan()],
+                }))
               }
               disabled={form.next_plans.length >= MAX_NEXT_PLAN_COUNT}
             >
@@ -894,10 +893,12 @@ export function ReportForm({
                   type="button"
                   className="btn ghost danger compact absolute top-2 right-2 z-10"
                   onClick={() =>
-                    patch(
-                      "next_plans",
-                      form.next_plans.filter((row) => row.id !== item.id),
-                    )
+                    setFormValue((prev) => ({
+                      ...prev,
+                      next_plans: prev.next_plans.filter(
+                        (row) => row.id !== item.id,
+                      ),
+                    }))
                   }
                   disabled={form.next_plans.length === 1}
                 >
@@ -911,7 +912,6 @@ export function ReportForm({
                       value={item.meeting_date}
                       onChange={(e) =>
                         patchPlan(item.id, {
-                          ...item,
                           meeting_date: e.target.value,
                         })
                       }
@@ -922,7 +922,7 @@ export function ReportForm({
                     <input
                       value={item.topic}
                       onChange={(e) =>
-                        patchPlan(item.id, { ...item, topic: e.target.value })
+                        patchPlan(item.id, { topic: e.target.value })
                       }
                     />
                   </div>
@@ -933,7 +933,7 @@ export function ReportForm({
                     rows={4}
                     value={item.goals}
                     onChange={(e) =>
-                      patchPlan(item.id, { ...item, goals: e.target.value })
+                      patchPlan(item.id, { goals: e.target.value })
                     }
                   />
                 </div>
