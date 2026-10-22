@@ -87,7 +87,8 @@ function imageTags(images: { dataUrl: string }[] | undefined) {
   return (images ?? [])
     .map((image) => {
       const width = displayWidthForDataUrl(image.dataUrl);
-      return `<img src="${escapeHtml(image.dataUrl)}" alt="" style="display:block;width:${width};max-width:100%;height:auto;margin:8px 0 0;border:1px solid #d7e3e1;border-radius:10px;" />`;
+      const margin = width === "50%" ? "8px auto 0" : "8px 0 0";
+      return `<img src="${escapeHtml(image.dataUrl)}" alt="" style="display:block;width:${width};max-width:100%;height:auto;margin:${margin};border:1px solid #d7e3e1;border-radius:10px;" />`;
     })
     .join("");
 }

@@ -179,7 +179,8 @@ export const REPORT_VIEW_CSS = `
 .view-html-root .deliverable-grid li.is-portrait {
   width: 50%;
   max-width: 50%;
-  align-self: flex-start;
+  align-self: center;
+  margin-inline: auto;
 }
 .view-html-root .deliverable-grid img {
   display: block;
@@ -229,7 +230,8 @@ export const REPORT_VIEW_CSS = `
 .view-html-root .photo-item.is-portrait {
   width: 50%;
   max-width: 50%;
-  align-self: flex-start;
+  align-self: center;
+  margin-inline: auto;
 }
 .view-html-root .photo-item img {
   display: block;
